@@ -124,7 +124,7 @@ CMAKE_PROJECT_DESCRIPTION:STATIC=
 CMAKE_PROJECT_HOMEPAGE_URL:STATIC=
 
 //Value Computed by CMake
-CMAKE_PROJECT_NAME:STATIC=untitled
+CMAKE_PROJECT_NAME:STATIC=dpdk-switch
 
 //Path to a program.
 CMAKE_RANLIB:FILEPATH=/usr/bin/ranlib
@@ -190,6 +190,12 @@ ProcessorCount_cmd_getconf:FILEPATH=/usr/bin/getconf
 
 //Path to a program.
 ProcessorCount_cmd_sysctl:FILEPATH=/sbin/sysctl
+
+//Value Computed by CMake
+dpdk-switch_BINARY_DIR:STATIC=/home/alery/CLionProjects/dpdk-switch/cmake-build-debug
+
+//Value Computed by CMake
+dpdk-switch_SOURCE_DIR:STATIC=/home/alery/CLionProjects/dpdk-switch
 
 //Value Computed by CMake
 untitled_BINARY_DIR:STATIC=/home/alery/CLionProjects/dpdk-switch/cmake-build-debug

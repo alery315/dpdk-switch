@@ -120,6 +120,13 @@ int packet_enqueue(uint32_t dst_port, struct rte_mbuf *pkt) {
                 "%s: packet cannot enqueue in port %u, due to no enough room in the ring\n",
                 __func__, app.ports[dst_port]
             );
+            rte_pktmbuf_free(pkt);
+        } else {
+            app.qlen_bytes_in[dst_port] += pkt->pkt_len;
+            // 更新输出队列 in pkt
+            app.qlen_pkts_in[dst_port] ++;
+            /*app.buff_bytes_in += pkt->pkt_len;
+            app.buff_pkts_in ++;*/
         }
         // 更新输出队列 in bytes
 //        RTE_LOG(
@@ -128,16 +135,8 @@ int packet_enqueue(uint32_t dst_port, struct rte_mbuf *pkt) {
 //                __func__, app.ports[dst_port], pkt->pkt_len
 //        );
 
-        app.qlen_bytes_in[dst_port] += pkt->pkt_len;
-        // 更新输出队列 in pkt
-        app.qlen_pkts_in[dst_port] ++;
-        /*app.buff_bytes_in += pkt->pkt_len;
-        app.buff_pkts_in ++;*/
-
         /**
-         *
-         */
-
+         * 这一段log_qlen,没用
         if (app.log_qlen && pkt->pkt_len >= MEAN_PKT_SIZE &&
             (app.log_qlen_port >= app.n_ports ||
              app.log_qlen_port == app.ports[dst_port])
@@ -145,22 +144,23 @@ int packet_enqueue(uint32_t dst_port, struct rte_mbuf *pkt) {
             if (app.qlen_start_cycle == 0) {
                 app.qlen_start_cycle = rte_get_tsc_cycles();
             }
-            /**
-             "<Time (in s)>",
-             "<Port id>",
-             "<Qlen in Bytes>",
-             "<Buffer occupancy in Bytes>"
-             */
+
+//             "<Time (in s)>",
+//             "<Port id>",
+//             "<Qlen in Bytes>",
+//             "<Buffer occupancy in Bytes>"
+
             fprintf(
                 app.qlen_file,
                 "%-12.6f %-8u %-8u %-8u\n",
-                /* 记录的cpu_freq主要用在这里 */
+                 // 记录的cpu_freq主要用在这里
                 (float) (rte_get_tsc_cycles() - app.qlen_start_cycle) / app.cpu_freq[rte_lcore_id()],
                 app.ports[dst_port],
                 qlen_bytes,
                 buff_occu_bytes
             );
         }
+        */
     } else {
         rte_pktmbuf_free(pkt);
     }

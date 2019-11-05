@@ -113,6 +113,10 @@ struct app_mbuf_array {
 #define APP_MAX_PORTS 4
 #endif
 
+#ifndef APP_MAX_QUEUES
+#define APP_MAX_QUEUES 4
+#endif
+
 struct app_fwd_table_item {
     uint8_t port_id;
     /* the time (in cpu frequency) when the item is added */
@@ -150,6 +154,7 @@ struct app_params {
     /* Ports*/
     uint32_t ports[APP_MAX_PORTS];
     uint32_t n_ports;
+    uint32_t n_queues;
     uint32_t port_rx_ring_size;
     uint32_t port_tx_ring_size;
 
@@ -187,7 +192,7 @@ struct app_params {
     uint32_t qlen_pkts_in[APP_MAX_PORTS];
     uint32_t qlen_pkts_out[APP_MAX_PORTS];
     /* Rings */
-    struct rte_ring *rings_rx[APP_MAX_PORTS];
+    struct rte_ring *rings_rx[APP_MAX_PORTS][APP_MAX_QUEUES];
     struct rte_ring *rings_tx[APP_MAX_PORTS];
     uint32_t ring_rx_size;
     uint32_t ring_tx_size;

@@ -128,7 +128,8 @@ app_main_loop_forwarding(void) {
     struct ether_hdr *eth;
     // 通用rte_mbuf,包含数据包的mbuf,它的指针
     struct rte_mbuf* new_pkt;
-    uint32_t i, j;
+    uint32_t i, j, q;
+    uint32_t queues = app.n_queues;
     int dst_port;
 
     RTE_LOG(INFO, SWITCH, "Core %u is doing forwarding\n",
@@ -169,63 +170,69 @@ app_main_loop_forwarding(void) {
 
         // 从ring中出队一个对象,非多消费者安全
         // ret_ring 指针,存放数据的指针数组,0为成功出队
-        ret = rte_ring_sc_dequeue(
-            app.rings_rx[i],
-            (void **) worker_mbuf->array);
 
-        // 没有数据,继续下一循环
-        if (ret == -ENOENT)
-            continue;
+        for (q = 0; q < queues; q++) {
 
-        // l2 learning
-        // 给定的buf从头部开始,取一个type类型大小的对象,返回指针
-        eth = rte_pktmbuf_mtod(worker_mbuf->array[0], struct ether_hdr*);
+            ret = rte_ring_sc_dequeue(
+                    app.rings_rx[i][q],
+                    (void **) worker_mbuf->array);
 
-        // 根据source addr进行l2学习
-        // 传入s-addr的指针,与之对应的端口号
-        app_l2_learning(&(eth->s_addr), i);
+            // 没有数据,继续下一循环
+            if (ret == -ENOENT)
+                continue;
 
-        // l2 forward
-        // 根据dst_addr查找目标端口
-        dst_port = app_l2_lookup(&(eth->d_addr));
-        if (unlikely(dst_port < 0)) {
-            /* broadcast */
-            RTE_LOG(DEBUG, SWITCH, "%s: broadcast packets\n", __func__);
-            for (j = 0; j < app.n_ports; j++) {
-                if (j == i) {
-                    continue;
-                } else if (j == (i ^ 1)) {
-                    // 0-1 2-3 ..对应端口直接发送,进入队列
-                    packet_enqueue(j, worker_mbuf->array[0]);
-                } else {
-                    // ???为什么这么操作,非对应端口需要复制
-                    // 需要在buffer pool里面clone一个pkt
-                    // 由于多播,需要复制一份计数,为间接buffer,函数将md的各结构体成员(除了引用计数)复制给mi
-                    // 并将md的引用加一,mi->pkt.data指向md的data数据域
-                    // 释放则根据引用计数来操作
-                    new_pkt = rte_pktmbuf_clone(worker_mbuf->array[0], app.pool);
-                    // 将新pkt进队
-                    packet_enqueue(j, new_pkt);
+            // l2 learning
+            // 给定的buf从头部开始,取一个type类型大小的对象,返回指针
+            eth = rte_pktmbuf_mtod(worker_mbuf->array[0], struct ether_hdr*);
 
-                    // ???本来这段被注释掉,放到对应端口的tx_ring中
-                    /*rte_ring_sp_enqueue(
-                        app.rings_tx[j],
-                        new_pkt
-                    );*/
+            // 根据source addr进行l2学习
+            // 传入s-addr的指针,与之对应的端口号
+            app_l2_learning(&(eth->s_addr), i);
+
+            // l2 forward
+            // 根据dst_addr查找目标端口
+            dst_port = app_l2_lookup(&(eth->d_addr));
+            if (unlikely(dst_port < 0)) {
+                /* broadcast */
+                RTE_LOG(DEBUG, SWITCH, "%s: broadcast packets\n", __func__);
+                for (j = 0; j < app.n_ports; j++) {
+                    if (j == i) {
+                        continue;
+                    } else if (j == (i ^ 1)) {
+                        // 0-1 2-3 ..对应端口直接发送,进入队列
+                        packet_enqueue(j, worker_mbuf->array[0]);
+                    } else {
+                        // ???为什么这么操作,非对应端口需要复制
+                        // 需要在buffer pool里面clone一个pkt
+                        // 由于多播,需要复制一份计数,为间接buffer,函数将md的各结构体成员(除了引用计数)复制给mi
+                        // 并将md的引用加一,mi->pkt.data指向md的data数据域
+                        // 释放则根据引用计数来操作
+                        new_pkt = rte_pktmbuf_clone(worker_mbuf->array[0], app.pool);
+                        // 将新pkt进队
+                        packet_enqueue(j, new_pkt);
+
+                        // ???本来这段被注释掉,放到对应端口的tx_ring中
+                        /*rte_ring_sp_enqueue(
+                            app.rings_tx[j],
+                            new_pkt
+                        );*/
+                    }
                 }
+            } else {
+                RTE_LOG(
+                        DEBUG, SWITCH,
+                        "%s: src_prot %u queue %u forward packet to %d--------\n",
+                        __func__, i, q,app.ports[dst_port]
+                );
+                packet_enqueue(dst_port, worker_mbuf->array[0]);
+                /*rte_ring_sp_enqueue(
+                    app.rings_tx[dst_port],
+                    worker_mbuf->array[0]
+                );*/
             }
-        } else {
-            RTE_LOG(
-                DEBUG, SWITCH,
-                "%s: forward packet to %d--------\n",
-                __func__, app.ports[dst_port]
-            );
-            packet_enqueue(dst_port, worker_mbuf->array[0]);
-            /*rte_ring_sp_enqueue(
-                app.rings_tx[dst_port],
-                worker_mbuf->array[0]
-            );*/
         }
+
+
 
         /*do {
             ret = rte_ring_sp_enqueue_bulk(

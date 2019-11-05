@@ -3,6 +3,7 @@
 struct app_params app = {
     /* Ports*/
     .n_ports = 1,
+    .n_queues = 4,
     .port_rx_ring_size = 128,
     .port_tx_ring_size = 32,
 
@@ -51,6 +52,7 @@ struct app_params app = {
 static struct rte_eth_conf port_conf = {
     .rxmode = {
         .split_hdr_size = 0,
+        .mq_mode = ETH_MQ_RX_RSS,
         .header_split   = 0, /* Header Split disabled */
         .hw_ip_checksum = 1, /* IP checksum offload enabled */
         .hw_vlan_filter = 0, /* VLAN filtering disabled */
@@ -60,7 +62,7 @@ static struct rte_eth_conf port_conf = {
     .rx_adv_conf = {
         .rss_conf = {
             .rss_key = NULL,
-            .rss_hf = ETH_RSS_IP,
+            .rss_hf = ETH_RSS_IP | ETH_RSS_TCP | ETH_RSS_UDP,
         },
     },
     .txmode = {
@@ -118,7 +120,7 @@ static void
 app_init_mbuf_pools(void) {
     /* Init the buffer pool */
     RTE_LOG(INFO, SWITCH, "Creating the mbuf pool ...\n");
-    uint32_t temp_pool_size = (topower2(app.buff_size_bytes / MEAN_PKT_SIZE) << 2) - 1;
+    uint32_t temp_pool_size = (topower2(app.buff_size_bytes / MEAN_PKT_SIZE) << 5) - 1;
 //    uint32_t temp_pool_size = 180000;
     printf("pool size is :%u\n", app.pool_size);
     app.pool_size = (app.pool_size < temp_pool_size ? temp_pool_size : app.pool_size);
@@ -132,23 +134,26 @@ app_init_mbuf_pools(void) {
 
 static void
 app_init_rings(void) {
-    uint32_t i;
+    uint32_t i,j;
 
     // init rx_ring
     app.ring_rx_size = (topower2(app.buff_size_bytes / MEAN_PKT_SIZE) << 2);
     for (i = 0; i < app.n_ports; i++) {
         char name[32];
 
-        snprintf(name, sizeof(name), "app_ring_rx_%u", i);
-        printf("prot is %u, ring_rx_size is %u\n", i, app.ring_rx_size);
-        app.rings_rx[i] = rte_ring_create(
-            name,
-            app.ring_rx_size,
-            rte_socket_id(),
-            RING_F_SP_ENQ | RING_F_SC_DEQ); // single producer | single consumer
+        for (j = 0; j < app.n_queues; j++) {
+            snprintf(name, sizeof(name), "app_ring_rx_%u_%u", i, j);
+            printf("prot is %u, queue is %u, ring_rx_size is %u\n", i, j, app.ring_rx_size);
+            app.rings_rx[i][j] = rte_ring_create(
+                    name,
+                    app.ring_rx_size,
+                    rte_socket_id(),
+                    RING_F_SP_ENQ | RING_F_SC_DEQ); // single producer | single consumer
 
-        if (app.rings_rx[i] == NULL)
-            rte_panic("Cannot create RX ring %u\n", i);
+            if (app.rings_rx[i][j] == NULL)
+                rte_panic("Cannot create RX ring %u queue %u\n", i, j);
+        }
+
     }
 
     // init tx_ring
@@ -208,17 +213,20 @@ app_init_ports(void) {
     /* Init NIC ports, then start the ports */
     for (i = 0; i < app.n_ports; i++) {
         uint8_t port;
+        uint8_t queues;
+        uint32_t q;
         int ret;
 
         port = (uint8_t) app.ports[i];
+        queues = (uint8_t) app.n_queues;
         RTE_LOG(INFO, SWITCH, "Initializing NIC port %u ...\n", port);
 
         /* Init port */
         /* config tx & rx queue */
         ret = rte_eth_dev_configure(
             port,
-            1,
-            1,
+            queues,
+            queues,
             &port_conf);
         if (ret < 0)
             rte_panic("Cannot init NIC port %u (%d)\n", port, ret);
@@ -228,27 +236,32 @@ app_init_ports(void) {
 
         /* Init RX queues */
         /* 这里加内存循环,加队列 */
-        ret = rte_eth_rx_queue_setup(
-            port,
-            0,
-            app.port_rx_ring_size,
-            rte_eth_dev_socket_id(port),
-            &rx_conf,
-            app.pool);
-        if (ret < 0)
-            rte_panic("Cannot init RX for port %u (%d)\n",
-                (uint32_t) port, ret);
+        for (q = 0; q < queues; q++) {
+            ret = rte_eth_rx_queue_setup(
+                    port,
+                    q,
+                    app.port_rx_ring_size,
+                    rte_eth_dev_socket_id(port),
+                    &rx_conf,
+                    app.pool);
+            if (ret < 0)
+                rte_panic("Cannot init RX for port %u queue %u(%d)\n",
+                          (uint32_t) port, q, ret);
+        }
+
 
         /* Init TX queues */
-        ret = rte_eth_tx_queue_setup(
-            port,
-            0,
-            app.port_tx_ring_size,
-            rte_eth_dev_socket_id(port),
-            &tx_conf);
-        if (ret < 0)
-            rte_panic("Cannot init TX for port %u (%d)\n",
-                (uint32_t) port, ret);
+        for (q = 0; q < queues; q++) {
+            ret = rte_eth_tx_queue_setup(
+                    port,
+                    q,
+                    app.port_tx_ring_size,
+                    rte_eth_dev_socket_id(port),
+                    &tx_conf);
+            if (ret < 0)
+                rte_panic("Cannot init TX for port %u queue %u(%d)\n",
+                          (uint32_t) port, q, ret);
+        }
 
         /* Start port */
         ret = rte_eth_dev_start(port);
