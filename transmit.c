@@ -78,14 +78,6 @@ app_main_loop_tx_each_port(uint32_t port_id) {
 }
 
 void app_main_tx_port(uint32_t port_id) {
-    struct rte_mbuf* pkt;
-    uint64_t current_time, prev_time = app.prev_time[port_id];
-    // tx_rate的放大倍数
-    uint64_t tx_rate_scale = app.tx_rate_scale[port_id];
-    uint16_t n_mbufs, n_pkts;
-    uint64_t token = app.token[port_id];
-    int ret;
-    uint32_t q, queues = app.n_queues;
 
     // 一直都是0?
 //    if (n_mbufs > 0) {
@@ -96,22 +88,35 @@ void app_main_tx_port(uint32_t port_id) {
 //        );
 //    }
 
-    current_time = rte_get_tsc_cycles();
-    // 配置值
-    if (app.tx_rate_mbps > 0) {
-        // tbf: generate tokens
-        token += ((tx_rate_scale * (current_time - prev_time)) >> RATE_SCALE);
-        token = MIN(token, (app.bucket_size<<1));
-
-        app.prev_time[port_id] = current_time;
-        if (token < app.bucket_size) {
-            app.token[port_id] = token;
-            return ;
-        }
-    }
+    uint32_t q, queues = app.n_queues;
+    struct rte_mbuf* pkt;
+    uint64_t current_time, prev_time;
+    uint64_t tx_rate_scale;
+    uint16_t n_mbufs, n_pkts;
+    uint64_t token;
+    int ret;
 
     // 优先级排空的问题在这里更改
     for (q = 0; q < queues && !force_quit; q++) {
+        prev_time = app.prev_time[port_id];
+        // tx_rate的放大倍数uint64_t tx_rate_scale
+        tx_rate_scale = app.tx_rate_scale[port_id];
+        token = app.token[port_id];
+
+        current_time = rte_get_tsc_cycles();
+        // 配置值
+        if (app.tx_rate_mbps > 0) {
+            // tbf: generate tokens
+            token += ((tx_rate_scale * (current_time - prev_time)) >> RATE_SCALE);
+            token = MIN(token, (app.bucket_size<<1));
+
+            app.prev_time[port_id] = current_time;
+            if (token < app.bucket_size) {
+                app.token[port_id] = token;
+                return ;
+            }
+        }
+
         // 当前端口含有多少数据指针
         n_mbufs = app.mbuf_tx[port_id][q].n_mbufs;
 
@@ -132,6 +137,7 @@ void app_main_tx_port(uint32_t port_id) {
         pkt = app.mbuf_tx[port_id][q].array[n_mbufs];
         app.qlen_bytes_out[port_id] += pkt->pkt_len;
         app.qlen_pkts_out[port_id] ++;
+        app.qlen_pkts_out_queue[port_id][q] ++;
         if (app.tx_rate_mbps > 0) {
             token -= pkt->pkt_len;
             app.token[port_id] = token;
@@ -174,7 +180,8 @@ void app_main_tx_port(uint32_t port_id) {
         } while (k < n_mbufs);
 
         app.mbuf_tx[port_id][q].n_mbufs = 0;
-    }
 
+
+    }
 
 }

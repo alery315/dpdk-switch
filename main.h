@@ -192,6 +192,9 @@ struct app_params {
     uint32_t qlen_bytes_out[APP_MAX_PORTS];
     uint32_t qlen_pkts_in[APP_MAX_PORTS];
     uint32_t qlen_pkts_out[APP_MAX_PORTS];
+    uint32_t qlen_pkts_in_queue[APP_MAX_PORTS][APP_MAX_QUEUES];
+    uint32_t qlen_pkts_out_queue[APP_MAX_PORTS][APP_MAX_QUEUES];
+    uint32_t queue_priority[APP_MAX_PORTS];
     /* Rings */
     struct rte_ring *rings_rx[APP_MAX_PORTS][APP_MAX_QUEUES];
     struct rte_ring *rings_tx[APP_MAX_PORTS][APP_MAX_QUEUES];

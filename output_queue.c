@@ -129,7 +129,9 @@ int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt) 
             );
             app.qlen_bytes_in[dst_port] += pkt->pkt_len;
             // 更新输出队列 in pkt
-            app.qlen_pkts_in[dst_port] ++;
+            app.qlen_pkts_in[dst_port]++;
+            app.qlen_pkts_in_queue[dst_port][dst_queue]++;
+            app.queue_priority[dst_port] &= dst_queue;
             /*app.buff_bytes_in += pkt->pkt_len;
             app.buff_pkts_in ++;*/
         }

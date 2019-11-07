@@ -37,7 +37,7 @@ struct app_params app = {
     .burst_size_worker_read = 1,
     .burst_size_worker_write = 1,
     .burst_size_tx_read = 1,
-    .burst_size_tx_write = 8,
+    .burst_size_tx_write = 4,
 
     /* forwarding things */
     .ft_name = "Forwarding Table",
@@ -172,9 +172,11 @@ app_init_rings(void) {
 
             if (app.rings_tx[i][j] == NULL)
                 rte_panic("Cannot create TX ring %u queue %u\n", i, j);
+            app.qlen_pkts_in_queue[i][j] = app.qlen_pkts_out_queue[i][j] = 0;
         }
         app.qlen_bytes_in[i] = app.qlen_pkts_in[i] = 0;
         app.qlen_bytes_out[i] = app.qlen_pkts_out[i] = 0;
+
     }
 
 }
