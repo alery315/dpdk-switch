@@ -19,7 +19,7 @@ app_main_loop_rx(void) {
          * port_id,queue_id,rx_pkt指针数组的地址,需要读的数量
          * return:返回实际取回的数量
          */
-        for (j = 0; j < queues; j++) {
+        for (j = 0; j < queues && !force_quit; j++) {
             n_mbufs = rte_eth_rx_burst(
                     app.ports[i],
                     j,

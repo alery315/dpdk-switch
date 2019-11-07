@@ -126,10 +126,11 @@ app_l2_lookup(const struct ether_addr* addr) {
  * @return
  */
 uint16_t
-get_priority(const struct ether_hdr * eth){
+get_priority(struct ether_hdr * eth){
     struct ipv4_hdr *ipv4_hdr;
     struct tcp_hdr *tcp;
     struct udp_hdr *udp;
+    uint16_t queues = app.n_queues - 1;
     uint16_t port_src;
     //uint16_t port_dst;
     ipv4_hdr = (struct ipv4_hdr *)(eth + 1);
@@ -149,7 +150,7 @@ get_priority(const struct ether_hdr * eth){
             //port_dst = -1;
             break;
     }
-    return port_src;
+    return port_src & queues;
 }
 
 
@@ -205,7 +206,7 @@ app_main_loop_forwarding(void) {
         // 从ring中出队一个对象,非多消费者安全
         // ret_ring 指针,存放数据的指针数组,0为成功出队
 
-        for (q = 0; q < queues; q++) {
+        for (q = 0; q < queues && !force_quit; q++) {
 
             ret = rte_ring_sc_dequeue(
                     app.rings_rx[i][q],
@@ -229,13 +230,13 @@ app_main_loop_forwarding(void) {
             dst_port = app_l2_lookup(&(eth->d_addr));
             if (unlikely(dst_port < 0)) {
                 /* broadcast */
-                RTE_LOG(DEBUG, SWITCH, "%s: src_prot %u queue %u broadcast packets\n", __func__, i, q);
+                RTE_LOG(DEBUG, SWITCH, "%s: src_prot %u queue %u broadcast packets\n", __func__, i, priority);
                 for (j = 0; j < app.n_ports; j++) {
                     if (j == i) {
                         continue;
                     } else if (j == (i ^ 1)) {
                         // 0-1 2-3 ..对应端口直接发送,进入队列
-                        packet_enqueue(j, q,worker_mbuf->array[0]);
+                        packet_enqueue(j, priority,worker_mbuf->array[0]);
                     } else {
                         // ???为什么这么操作,非对应端口需要复制
                         // 需要在buffer pool里面clone一个pkt
@@ -244,7 +245,7 @@ app_main_loop_forwarding(void) {
                         // 释放则根据引用计数来操作
                         new_pkt = rte_pktmbuf_clone(worker_mbuf->array[0], app.pool);
                         // 将新pkt进队
-                        packet_enqueue(j, q, new_pkt);
+                        packet_enqueue(j, priority, new_pkt);
 
                         // ???本来这段被注释掉,放到对应端口的tx_ring中
                         /*rte_ring_sp_enqueue(
@@ -257,9 +258,9 @@ app_main_loop_forwarding(void) {
                 RTE_LOG(
                         DEBUG, SWITCH,
                         "%s: src_prot %u queue %u forward packet to %d--------\n",
-                        __func__, i, q,app.ports[dst_port]
+                        __func__, i, priority,app.ports[dst_port]
                 );
-                packet_enqueue(dst_port, q, worker_mbuf->array[0]);
+                packet_enqueue(dst_port, priority, worker_mbuf->array[0]);
                 /*rte_ring_sp_enqueue(
                     app.rings_tx[dst_port],
                     worker_mbuf->array[0]

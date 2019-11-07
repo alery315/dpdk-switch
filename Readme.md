@@ -5,8 +5,6 @@ i will add (multi-priority) multi-queue for every port.
 
 i will change some code implement.
 
-test add a new branch
-
 This is a l2 learning switch based on DPDK.
 
 # Features

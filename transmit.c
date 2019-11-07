@@ -111,7 +111,7 @@ void app_main_tx_port(uint32_t port_id) {
     }
 
     // 优先级排空的问题在这里更改
-    for (q = 0; q < queues; q++) {
+    for (q = 0; q < queues && !force_quit; q++) {
         // 当前端口含有多少数据指针
         n_mbufs = app.mbuf_tx[port_id][q].n_mbufs;
 
