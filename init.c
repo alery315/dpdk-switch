@@ -37,7 +37,7 @@ struct app_params app = {
     .burst_size_worker_read = 1,
     .burst_size_worker_write = 1,
     .burst_size_tx_read = 1,
-    .burst_size_tx_write = 64,
+    .burst_size_tx_write = 8,
 
     /* forwarding things */
     .ft_name = "Forwarding Table",
@@ -120,7 +120,7 @@ static void
 app_init_mbuf_pools(void) {
     /* Init the buffer pool */
     RTE_LOG(INFO, SWITCH, "Creating the mbuf pool ...\n");
-    uint32_t temp_pool_size = (topower2(app.buff_size_bytes / MEAN_PKT_SIZE) << 5) - 1;
+    uint32_t temp_pool_size = (topower2(app.buff_size_bytes / MEAN_PKT_SIZE) << 6) - 1;
 //    uint32_t temp_pool_size = 180000;
     printf("pool size is :%u\n", app.pool_size);
     app.pool_size = (app.pool_size < temp_pool_size ? temp_pool_size : app.pool_size);
@@ -161,16 +161,18 @@ app_init_rings(void) {
     for (i = 0; i < app.n_ports; i++) {
         char name[32];
 
-        snprintf(name, sizeof(name), "app_ring_tx_%u", i);
+        for (j = 0; j < app.n_queues; j++) {
+            snprintf(name, sizeof(name), "app_ring_tx_%u_%u", i, j);
+            printf("prot is %u, queue is %u, ring_tx_size is %u\n", i, j, app.ring_tx_size);
+            app.rings_tx[i][j] = rte_ring_create(
+                    name,
+                    app.ring_tx_size,
+                    rte_socket_id(),
+                    RING_F_SP_ENQ | RING_F_SC_DEQ);
 
-        app.rings_tx[i] = rte_ring_create(
-            name,
-            app.ring_tx_size,
-            rte_socket_id(),
-            RING_F_SP_ENQ | RING_F_SC_DEQ);
-
-        if (app.rings_tx[i] == NULL)
-            rte_panic("Cannot create TX ring %u\n", i);
+            if (app.rings_tx[i][j] == NULL)
+                rte_panic("Cannot create TX ring %u queue %u\n", i, j);
+        }
         app.qlen_bytes_in[i] = app.qlen_pkts_in[i] = 0;
         app.qlen_bytes_out[i] = app.qlen_pkts_out[i] = 0;
     }

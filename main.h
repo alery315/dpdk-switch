@@ -75,6 +75,7 @@
 #include <rte_mbuf.h>
 #include <rte_ip.h>
 #include <rte_tcp.h>
+#include <rte_udp.h>
 #include <rte_lpm.h>
 #include <rte_lpm6.h>
 #include <rte_malloc.h>
@@ -193,13 +194,13 @@ struct app_params {
     uint32_t qlen_pkts_out[APP_MAX_PORTS];
     /* Rings */
     struct rte_ring *rings_rx[APP_MAX_PORTS][APP_MAX_QUEUES];
-    struct rte_ring *rings_tx[APP_MAX_PORTS];
+    struct rte_ring *rings_tx[APP_MAX_PORTS][APP_MAX_QUEUES];
     uint32_t ring_rx_size;
     uint32_t ring_tx_size;
 
     /* Internal buffers */
     struct app_mbuf_array mbuf_rx;
-    struct app_mbuf_array mbuf_tx[APP_MAX_PORTS];
+    struct app_mbuf_array mbuf_tx[APP_MAX_PORTS][APP_MAX_QUEUES];
 
     /* Buffer pool */
     struct rte_mempool *pool;
@@ -272,7 +273,7 @@ uint32_t get_buff_occu_bytes(void);
  *  0: succeed, < 0: packet dropped
  *  -1: queue length > threshold, -2: buffer overflow, -3: other unknown reason
 */
-int packet_enqueue(uint32_t dst_port, struct rte_mbuf *pkt);
+int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt);
 
 /*
  * Get port qlen threshold for a port

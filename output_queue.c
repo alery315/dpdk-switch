@@ -62,7 +62,7 @@ static int mark_packet_with_ecn(struct rte_mbuf *pkt) {
  * -2 Packet dropped due to buffer overflow
  * -3 Cannot mark packet with ECN, drop packet
  */
-int packet_enqueue(uint32_t dst_port, struct rte_mbuf *pkt) {
+int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt) {
     int ret = 0, mark_pkt = 0, mark_ret;
     // 获取目标端口的queue长度,bytes为单位,in - out,就是还在交换机中的数据,占用了缓存的数据量
 
@@ -111,17 +111,22 @@ int packet_enqueue(uint32_t dst_port, struct rte_mbuf *pkt) {
     if (ret == 0) {
         // 添加到目标队列的ring_tx中
         int enqueue_ret = rte_ring_sp_enqueue(
-            app.rings_tx[dst_port],
+            app.rings_tx[dst_port][dst_queue],
             pkt
         );
         if (enqueue_ret != 0) {
-            RTE_LOG(
-                ERR, SWITCH,
-                "%s: packet cannot enqueue in port %u, due to no enough room in the ring\n",
-                __func__, app.ports[dst_port]
-            );
+//            RTE_LOG(
+//                ERR, SWITCH,
+//                "%s: packet cannot enqueue in port %u queue %u, due to no enough room in the ring\n",
+//                __func__, app.ports[dst_port], dst_queue
+//            );
             rte_pktmbuf_free(pkt);
         } else {
+            RTE_LOG(
+                    DEBUG, SWITCH,
+                    "%s: packet enqueue in port %u queue %u\n",
+                    __func__, app.ports[dst_port], dst_queue
+            );
             app.qlen_bytes_in[dst_port] += pkt->pkt_len;
             // 更新输出队列 in pkt
             app.qlen_pkts_in[dst_port] ++;

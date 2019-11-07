@@ -120,12 +120,46 @@ app_l2_lookup(const struct ether_addr* addr) {
     return -1;
 }
 
+/**
+ * 把数据包里的src_port转为优先级
+ * @param eth
+ * @return
+ */
+uint16_t
+get_priority(const struct ether_hdr * eth){
+    struct ipv4_hdr *ipv4_hdr;
+    struct tcp_hdr *tcp;
+    struct udp_hdr *udp;
+    uint16_t port_src;
+    //uint16_t port_dst;
+    ipv4_hdr = (struct ipv4_hdr *)(eth + 1);
+    switch (ipv4_hdr->next_proto_id) {
+        case IPPROTO_TCP:
+            tcp = (struct tcp_hdr *)((unsigned char *)ipv4_hdr + sizeof(struct ipv4_hdr));
+            port_src = rte_be_to_cpu_16(tcp->src_port);
+            //port_dst = rte_be_to_cpu_16(tcp->dst_port);
+            break;
+        case IPPROTO_UDP:
+            udp = (struct udp_hdr *)((unsigned char *)ipv4_hdr + sizeof(struct ipv4_hdr));
+            port_src = rte_be_to_cpu_16(udp->src_port);
+            //port_dst = rte_be_to_cpu_16(udp->dst_port);
+            break;
+        default:
+            port_src = -1;
+            //port_dst = -1;
+            break;
+    }
+    return port_src;
+}
+
+
 void
 app_main_loop_forwarding(void) {
     // forward的mbuf结构体
     struct app_mbuf_array *worker_mbuf;
     // 以太网头部,目的,源,帧类型
     struct ether_hdr *eth;
+    uint16_t priority;
     // 通用rte_mbuf,包含数据包的mbuf,它的指针
     struct rte_mbuf* new_pkt;
     uint32_t i, j, q;
@@ -141,18 +175,18 @@ app_main_loop_forwarding(void) {
     app.fwd_item_valid_time = app.cpu_freq[rte_lcore_id()] / 1000 * VALID_TIME;
 
     // 判断是否需要log到文件
-    if (app.log_qlen) {
-        fprintf(
-            app.qlen_file,
-            "# %-10s %-8s %-8s %-8s\n",
-            "<Time (in s)>",
-            "<Port id>",
-            "<Qlen in Bytes>",
-            "<Buffer occupancy in Bytes>"
-        );
-        // 文件流缓冲区立即刷新,输出到文件
-        fflush(app.qlen_file);
-    }
+//    if (app.log_qlen) {
+//        fprintf(
+//            app.qlen_file,
+//            "# %-10s %-8s %-8s %-8s\n",
+//            "<Time (in s)>",
+//            "<Port id>",
+//            "<Qlen in Bytes>",
+//            "<Buffer occupancy in Bytes>"
+//        );
+//        // 文件流缓冲区立即刷新,输出到文件
+//        fflush(app.qlen_file);
+//    }
     // 从大页内存分配一个工作mbuf,成功返回指针
     worker_mbuf = rte_malloc_socket(NULL, sizeof(struct app_mbuf_array),
             RTE_CACHE_LINE_SIZE, rte_socket_id());
@@ -184,7 +218,8 @@ app_main_loop_forwarding(void) {
             // l2 learning
             // 给定的buf从头部开始,取一个type类型大小的对象,返回指针
             eth = rte_pktmbuf_mtod(worker_mbuf->array[0], struct ether_hdr*);
-
+            priority = get_priority(eth);
+            RTE_LOG(DEBUG, SWITCH, "%s: src_prot %u queue %u receive priority %u packet\n", __func__, i, q, priority);
             // 根据source addr进行l2学习
             // 传入s-addr的指针,与之对应的端口号
             app_l2_learning(&(eth->s_addr), i);
@@ -194,13 +229,13 @@ app_main_loop_forwarding(void) {
             dst_port = app_l2_lookup(&(eth->d_addr));
             if (unlikely(dst_port < 0)) {
                 /* broadcast */
-                RTE_LOG(DEBUG, SWITCH, "%s: broadcast packets\n", __func__);
+                RTE_LOG(DEBUG, SWITCH, "%s: src_prot %u queue %u broadcast packets\n", __func__, i, q);
                 for (j = 0; j < app.n_ports; j++) {
                     if (j == i) {
                         continue;
                     } else if (j == (i ^ 1)) {
                         // 0-1 2-3 ..对应端口直接发送,进入队列
-                        packet_enqueue(j, worker_mbuf->array[0]);
+                        packet_enqueue(j, q,worker_mbuf->array[0]);
                     } else {
                         // ???为什么这么操作,非对应端口需要复制
                         // 需要在buffer pool里面clone一个pkt
@@ -209,7 +244,7 @@ app_main_loop_forwarding(void) {
                         // 释放则根据引用计数来操作
                         new_pkt = rte_pktmbuf_clone(worker_mbuf->array[0], app.pool);
                         // 将新pkt进队
-                        packet_enqueue(j, new_pkt);
+                        packet_enqueue(j, q, new_pkt);
 
                         // ???本来这段被注释掉,放到对应端口的tx_ring中
                         /*rte_ring_sp_enqueue(
@@ -224,7 +259,7 @@ app_main_loop_forwarding(void) {
                         "%s: src_prot %u queue %u forward packet to %d--------\n",
                         __func__, i, q,app.ports[dst_port]
                 );
-                packet_enqueue(dst_port, worker_mbuf->array[0]);
+                packet_enqueue(dst_port, q, worker_mbuf->array[0]);
                 /*rte_ring_sp_enqueue(
                     app.rings_tx[dst_port],
                     worker_mbuf->array[0]

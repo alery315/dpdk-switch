@@ -40,7 +40,7 @@ log_transmit_args(uint32_t port_id) {
     tx_rate_scale = (((app.tx_rate_mbps >> 3) * (uint64_t) 1e6) << RATE_SCALE) / cpu_freq;
     tx_rate_bps = (tx_rate_scale * 8 * rte_get_tsc_hz()) >> RATE_SCALE;
     target_tx_rate_bps = app.tx_rate_mbps * (uint64_t) 1e6;
-    n_mbufs = app.mbuf_tx[port_id].n_mbufs;
+//    n_mbufs = app.mbuf_tx[port_id].n_mbufs;
 
     RTE_LOG(
             INFO, SWITCH,

@@ -41,8 +41,8 @@ app_main_loop_rx(void) {
             if (n_mbufs > 0) {
                 RTE_LOG(
                         DEBUG, SWITCH,
-                        "%s: receive %u packets from port %u------------------\n",
-                        __func__, n_mbufs, app.ports[i]
+                        "%s: receive %u packets from port %u queue %u------------------\n",
+                        __func__, n_mbufs, app.ports[i], j
                 );
             }
 

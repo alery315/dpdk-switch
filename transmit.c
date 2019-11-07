@@ -85,18 +85,16 @@ void app_main_tx_port(uint32_t port_id) {
     uint16_t n_mbufs, n_pkts;
     uint64_t token = app.token[port_id];
     int ret;
-
-    // 当前端口含有多少数据指针
-    n_mbufs = app.mbuf_tx[port_id].n_mbufs;
+    uint32_t q, queues = app.n_queues;
 
     // 一直都是0?
-    if (n_mbufs > 0) {
-        RTE_LOG(
-                DEBUG, SWITCH,
-                "%s: %u port has %u packets *************\n",
-                __func__, app.ports[port_id], n_mbufs
-        );
-    }
+//    if (n_mbufs > 0) {
+//        RTE_LOG(
+//                DEBUG, SWITCH,
+//                "%s: %u port has %u packets *************\n",
+//                __func__, app.ports[port_id], n_mbufs
+//        );
+//    }
 
     current_time = rte_get_tsc_cycles();
     // 配置值
@@ -111,49 +109,56 @@ void app_main_tx_port(uint32_t port_id) {
             return ;
         }
     }
-    // 从tx_ring出队一个对象
-    ret = rte_ring_sc_dequeue(
-        app.rings_tx[port_id],
-        (void **) &app.mbuf_tx[port_id].array[n_mbufs]);
 
-    if (ret == -ENOENT) { /* no packets in tx ring */
-        return ;
-    }
+    // 优先级排空的问题在这里更改
+    for (q = 0; q < queues; q++) {
+        // 当前端口含有多少数据指针
+        n_mbufs = app.mbuf_tx[port_id][q].n_mbufs;
 
-    /**
-     * 出队成功,更新记录参数
-     *
-     */
-    pkt = app.mbuf_tx[port_id].array[n_mbufs];
-    app.qlen_bytes_out[port_id] += pkt->pkt_len;
-    app.qlen_pkts_out[port_id] ++;
-    if (app.tx_rate_mbps > 0) {
-        token -= pkt->pkt_len;
-        app.token[port_id] = token;
-    }
+        // 从tx_ring出队一个对象
+        ret = rte_ring_sc_dequeue(
+                app.rings_tx[port_id][q],
+                (void **) &app.mbuf_tx[port_id][q].array[n_mbufs]);
 
-    n_mbufs ++;
+        // 这里不是return了,而是进入下一个队列
+        if (ret == -ENOENT) { /* no packets in tx ring */
+            continue ;
+        }
 
-//    RTE_LOG(
-//        INFO, SWITCH,
-//        "%s: port %u receive %u packets\n",
-//        __func__, app.ports[port_id], n_mbufs
-//    );
+        /**
+         * 出队成功,更新记录参数
+         *
+         */
+        pkt = app.mbuf_tx[port_id][q].array[n_mbufs];
+        app.qlen_bytes_out[port_id] += pkt->pkt_len;
+        app.qlen_pkts_out[port_id] ++;
+        if (app.tx_rate_mbps > 0) {
+            token -= pkt->pkt_len;
+            app.token[port_id] = token;
+        }
 
-    // 如果当前port的包小于burst_size_tx_write则return
-    if (n_mbufs < app.burst_size_tx_write) {
-        app.mbuf_tx[port_id].n_mbufs = n_mbufs;
-        return ;
-    }
+        n_mbufs ++;
 
-    uint16_t k = 0;
-    do {
-        n_pkts = rte_eth_tx_burst(
-            app.ports[port_id],
-            0,
-            &app.mbuf_tx[port_id].array[k],
-            n_mbufs - k);
-        k += n_pkts;
+        // 如果当前port的包小于burst_size_tx_write则return
+        if (n_mbufs < app.burst_size_tx_write) {
+            app.mbuf_tx[port_id][q].n_mbufs = n_mbufs;
+            continue ;
+        }
+
+        RTE_LOG(
+                DEBUG, SWITCH,
+                "%s: port %u queue %u receive %u packets\n",
+                __func__, app.ports[port_id], q, n_mbufs
+        );
+
+        uint16_t k = 0;
+        do {
+            n_pkts = rte_eth_tx_burst(
+                    app.ports[port_id],
+                    q,
+                    &app.mbuf_tx[port_id][q].array[k],
+                    n_mbufs - k);
+            k += n_pkts;
 //        if (k < n_mbufs) {
 //            RTE_LOG(
 //                INFO, SWITCH,
@@ -166,7 +171,10 @@ void app_main_tx_port(uint32_t port_id) {
 //                "%s: port %u k is %u\n",
 //                __func__, app.ports[port_id], k
 //        );
-    } while (k < n_mbufs);
+        } while (k < n_mbufs);
 
-    app.mbuf_tx[port_id].n_mbufs = 0;
+        app.mbuf_tx[port_id][q].n_mbufs = 0;
+    }
+
+
 }
