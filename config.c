@@ -309,9 +309,12 @@ app_parse_args(int argc, char **argv) {
 
     // 前俩核一个rx,一个worker,剩下的为每个端口的tx分配一个核,最后一个核做log
     app.core_rx = lcores[0];
-    app.core_worker = lcores[1];
+//    app.core_worker = lcores[1];
     for (i = 0; i < app.n_ports; i++) {
-        app.core_tx[i] = lcores[i+2];
+        app.core_worker[i] = lcores[i + 1];
+    }
+    for (i = 0; i < app.n_ports; i++) {
+        app.core_tx[i] = lcores[i + app.n_ports + 1];
     }
     app.core_log = lcores[n_lcores - 1];
     app.n_lcores = n_lcores;

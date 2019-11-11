@@ -148,7 +148,7 @@ struct app_params {
     /* CPU cores */
     uint32_t n_lcores;
     uint32_t core_rx;
-    uint32_t core_worker;
+    uint32_t core_worker[RTE_MAX_LCORE];
     uint32_t core_tx[RTE_MAX_LCORE];
     uint32_t core_log;
 
@@ -225,7 +225,7 @@ struct app_params {
     /* things about forwarding table */
     struct app_fwd_table_item fwd_table[FORWARD_ENTRY];
     char ft_name[MAX_NAME_LEN]; /* forward table name */
-    struct rte_hash* l2_hash;
+    struct rte_hash* l2_hash[APP_MAX_PORTS];
     uint64_t fwd_item_valid_time; /* valide time of forward item, in CPU cycles */
 
     uint32_t ecn_thresh_kb;
@@ -244,7 +244,7 @@ void app_init(void);
 int app_lcore_main_loop(void *arg);
 
 void app_main_loop_rx(void);
-void app_main_loop_forwarding(void);
+void app_main_loop_forwarding(uint32_t);
 void app_main_loop_tx_each_port(uint32_t);
 void app_main_loop_tx(void);
 void app_main_tx_port(uint32_t);
@@ -256,7 +256,8 @@ void app_main_loop_logging(void);
  * Initialize forwarding table.
  * Return 0 when OK, -1 when there is error.
  */
-int app_init_forwarding_table(const char *tname);
+//int app_init_forwarding_table(const char *tname, uint32_t port_id);
+int app_init_forwarding_table(uint32_t port_id);
 
 /*
  * Return 0 when OK, -1 when there is error.
@@ -266,7 +267,7 @@ int app_l2_learning(const struct ether_addr* srcaddr, uint8_t port);
 /*
  * Return port id to forward (broadcast if negative)
  */
-int app_l2_lookup(const struct ether_addr* addr);
+int app_l2_lookup(const struct ether_addr* addr, uint8_t port_id);
 
 uint32_t get_qlen_bytes(uint32_t port_id);
 uint32_t get_buff_occu_bytes(void);

@@ -126,15 +126,18 @@ app_lcore_main_loop(__attribute__((unused)) void *arg) {
         return 0;
     }
 
-    if (lcore == app.core_worker) {
-        RTE_LOG(
-                INFO, SWITCH,
-                "%s: current lcore is %u, doing main loop forwarding ...\n",
-                __func__, lcore
-        );
-        app_main_loop_forwarding();
-        return 0;
+    for (i = 0; i < app.n_ports; i++) {
+        if (lcore == app.core_worker[i]) {
+            RTE_LOG(
+                    INFO, SWITCH,
+                    "%s: current lcore is %u, doing main loop forwarding ...\n",
+                    __func__, lcore
+            );
+            app_main_loop_forwarding(i);
+            return 0;
+        }
     }
+
 
     if (lcore == app.core_log) {
         RTE_LOG(

@@ -276,18 +276,18 @@ app_init_ports(void) {
     app_ports_check_link();
 }
 
-
-int app_init_forwarding_table(const char* tname) {
-    size_t name_len = strlen(tname);
-    if (name_len > MAX_NAME_LEN) {
-        RTE_LOG(
-            ERR, HASH,
-            "%s: ERROR when init forward table: table name too long\n",
-            __func__
-        );
-        return -1;
-    }
-    rte_memcpy(app.ft_name, tname, name_len);
+int
+app_init_forwarding_table(uint32_t port_id) {
+//    size_t name_len = strlen(tname);
+//    if (name_len > MAX_NAME_LEN) {
+//        RTE_LOG(
+//            ERR, HASH,
+//            "%s: ERROR when init forward table: table name too long\n",
+//            __func__
+//        );
+//        return -1;
+//    }
+    sprintf(app.ft_name, "forwarding_table_%u", port_id);
     struct rte_hash_parameters hash_params = {
         .name = app.ft_name,
         .entries = FORWARD_ENTRY,
@@ -295,8 +295,9 @@ int app_init_forwarding_table(const char* tname) {
         .hash_func = rte_hash_crc,
         .hash_func_init_val = 0,
     };
-    app.l2_hash = rte_hash_create(&hash_params);
-    if (app.l2_hash == NULL) {
+
+    app.l2_hash[port_id] = rte_hash_create(&hash_params);
+    if (app.l2_hash[port_id] == NULL) {
         RTE_LOG(ERR, HASH, "%s: ERROR when create hash table.\n", __func__);
         return -1;
     }
@@ -305,10 +306,13 @@ int app_init_forwarding_table(const char* tname) {
 
 void
 app_init(void) {
+    uint32_t i;
     app_init_mbuf_pools();
     app_init_rings();
     app_init_ports();
-    app_init_forwarding_table("forwarding table");
+    for (i = 0; i < app.n_ports; i++) {
+        app_init_forwarding_table(i);
+    }
     app_init_locks();
 
     RTE_LOG(INFO, SWITCH, "Initialization completed\n");
