@@ -24,18 +24,19 @@ app_l2_learning(const struct ether_addr* srcaddr, uint8_t port) {
         // 向l2.hash新加一个src_addr key,返回一个正值,可以作为数组偏移,对key唯一
         // 返回一个hash值与src_addr一一对应
         for (uint32_t p = 0; p < app.n_ports; p++) {
-            rte_hash_add_key(app.l2_hash[p], srcaddr);
+            int new_index = rte_hash_add_key(app.l2_hash[p], srcaddr);
+            app.fwd_table[p][new_index].port_id = port;
             RTE_LOG(
                     INFO, HASH,
                     "%s: new item in forwarding table:"
                     " %02" PRIx8 " %02" PRIx8 " %02" PRIx8
                             " %02" PRIx8 " %02" PRIx8 " %02" PRIx8
-                            " --> %d -----%u\n",
+                            " --> %d -----%u-----index is %d, port is %d\n",
                     __func__,
                     srcaddr->addr_bytes[0], srcaddr->addr_bytes[1],
                     srcaddr->addr_bytes[2], srcaddr->addr_bytes[3],
                     srcaddr->addr_bytes[4], srcaddr->addr_bytes[5],
-                    app.ports[port],p
+                    app.ports[port],p, new_index, port
             );
         }
         //int new_ind = rte_hash_add_key(app.l2_hash[port], srcaddr);
@@ -53,28 +54,28 @@ app_l2_learning(const struct ether_addr* srcaddr, uint8_t port) {
         );
         return -1;
     } else {
-        // 找到了,在范围内
-        // 先取出old_port,临时变量
-        int old_port = app.fwd_table[index].port_id;
-        // 直接更新port和插入时间戳
-        app.fwd_table[index].port_id = port;
-        app.fwd_table[index].timestamp = rte_get_tsc_cycles();
-        // gettimeofday(&app.fwd_table[index].timestamp, NULL);
-        // 前后port不一样,更新,src_addr还是相同,但是他的port变了
-        if (old_port != port) {
-            RTE_LOG(
-                INFO, HASH,
-                "%s: Update item in forwarding table:"
-                " %02" PRIx8 " %02" PRIx8 " %02" PRIx8
-                " %02" PRIx8 " %02" PRIx8 " %02" PRIx8
-                "--> %d (previous: %d)\n",
-                __func__,
-                srcaddr->addr_bytes[0], srcaddr->addr_bytes[1],
-                srcaddr->addr_bytes[2], srcaddr->addr_bytes[3],
-                srcaddr->addr_bytes[4], srcaddr->addr_bytes[5],
-                app.ports[port], app.ports[old_port]
-            );
-        }
+//        // 找到了,在范围内
+//        // 先取出old_port,临时变量
+//        int old_port = app.fwd_table[index].port_id;
+//        // 直接更新port和插入时间戳
+//        app.fwd_table[index].port_id = port;
+//        app.fwd_table[index].timestamp = rte_get_tsc_cycles();
+//        // gettimeofday(&app.fwd_table[index].timestamp, NULL);
+//        // 前后port不一样,更新,src_addr还是相同,但是他的port变了
+//        if (old_port != port) {
+//            RTE_LOG(
+//                INFO, HASH,
+//                "%s: Update item in forwarding table:"
+//                " %02" PRIx8 " %02" PRIx8 " %02" PRIx8
+//                " %02" PRIx8 " %02" PRIx8 " %02" PRIx8
+//                "--> %d (previous: %d)\n",
+//                __func__,
+//                srcaddr->addr_bytes[0], srcaddr->addr_bytes[1],
+//                srcaddr->addr_bytes[2], srcaddr->addr_bytes[3],
+//                srcaddr->addr_bytes[4], srcaddr->addr_bytes[5],
+//                app.ports[port], app.ports[old_port]
+//            );
+//        }
     }
     return 0;
 }
@@ -84,7 +85,12 @@ app_l2_lookup(const struct ether_addr* addr, uint8_t port_id) {
     int index = rte_hash_lookup(app.l2_hash[port_id], addr);
     if (index >= 0 && index < FORWARD_ENTRY) {
         // 范围内的情况
-        return app.fwd_table[index].port_id;
+        RTE_LOG(
+                DEBUG, HASH,
+                "%s: port_id is %u, index is %d, dst_port is %d\n",
+                __func__, port_id, index, app.fwd_table[port_id][index].port_id
+        );
+        return app.fwd_table[port_id][index].port_id;
         // 获得当前时钟周期
 //        uint64_t now_time = rte_get_tsc_cycles();
 //        // 算出距离上次访问的时间戳差值
@@ -224,7 +230,7 @@ app_main_loop_forwarding(uint32_t port_id) {
         // 给定的buf从头部开始,取一个type类型大小的对象,返回指针
         eth = rte_pktmbuf_mtod(worker_mbuf->array[0], struct ether_hdr*);
         priority = get_priority(eth);
-        RTE_LOG(DEBUG, SWITCH, "%s: src_prot %u queue %u receive priority %u packet\n", __func__, port_id, q, priority);
+//        RTE_LOG(DEBUG, SWITCH, "%s: src_prot %u queue %u receive priority %u packet\n", __func__, port_id, q, priority);
         // 根据source addr进行l2学习
         // 传入s-addr的指针,与之对应的端口号
         app_l2_learning(&(eth->s_addr), port_id);
@@ -261,8 +267,8 @@ app_main_loop_forwarding(uint32_t port_id) {
         } else {
             RTE_LOG(
                     DEBUG, SWITCH,
-                    "%s: src_prot %u queue %u forward packet to %d--------\n",
-                    __func__, port_id, priority,app.ports[dst_port]
+                    "%s: src_prot %u queue %u forward packet to port %d queue %u--------\n",
+                    __func__, port_id, q, app.ports[dst_port], priority
             );
             packet_enqueue(dst_port, priority, worker_mbuf->array[0]);
             /*rte_ring_sp_enqueue(

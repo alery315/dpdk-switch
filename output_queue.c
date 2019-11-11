@@ -17,6 +17,11 @@ qlen_threshold_dt(uint32_t port_id) {
     return ((app.buff_size_bytes - get_buff_occu_bytes()) << app.dt_shift_alpha);
 }
 
+uint32_t
+qlen_threshold_edt(uint32_t port_id){
+
+}
+
 // 已经进来 - 已经出去 = 还在输出队列中的占用着buf的
 uint32_t get_qlen_bytes(uint32_t port_id) {
     return app.qlen_bytes_in[port_id] - app.qlen_bytes_out[port_id];
@@ -122,11 +127,11 @@ int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt) 
 //            );
             rte_pktmbuf_free(pkt);
         } else {
-            RTE_LOG(
-                    DEBUG, SWITCH,
-                    "%s: packet enqueue in port %u queue %u\n",
-                    __func__, app.ports[dst_port], dst_queue
-            );
+//            RTE_LOG(
+//                    DEBUG, SWITCH,
+//                    "%s: packet enqueue in port %u queue %u\n",
+//                    __func__, app.ports[dst_port], dst_queue
+//            );
             app.qlen_bytes_in[dst_port] += pkt->pkt_len;
             // 更新输出队列 in pkt
             app.qlen_pkts_in[dst_port]++;
@@ -175,8 +180,8 @@ int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt) 
     case 0:
         RTE_LOG(
             DEBUG, SWITCH,
-            "%s: packet enqueue to port %u\n",
-            __func__, app.ports[dst_port]
+            "%s: packet enqueue to port %u queue %u\n",
+            __func__, app.ports[dst_port], dst_queue
         );
         break;
     case -1:

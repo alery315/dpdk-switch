@@ -153,7 +153,7 @@ void app_main_tx_port(uint32_t port_id) {
 
         RTE_LOG(
                 DEBUG, SWITCH,
-                "%s: port %u queue %u receive %u packets\n",
+                "%s: port %u ------ queue %u transmit %u packets\n",
                 __func__, app.ports[port_id], q, n_mbufs
         );
 

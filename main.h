@@ -145,9 +145,10 @@ extern volatile bool force_quit;
 struct app_params {
     uint64_t cpu_freq[RTE_MAX_LCORE];
     uint64_t start_cycle;
+
     /* CPU cores */
     uint32_t n_lcores;
-    uint32_t core_rx;
+    uint32_t core_rx[RTE_MAX_LCORE];
     uint32_t core_worker[RTE_MAX_LCORE];
     uint32_t core_tx[RTE_MAX_LCORE];
     uint32_t core_log;
@@ -202,7 +203,7 @@ struct app_params {
     uint32_t ring_tx_size;
 
     /* Internal buffers */
-    struct app_mbuf_array mbuf_rx;
+    struct app_mbuf_array mbuf_rx[APP_MAX_PORTS][APP_MAX_QUEUES];
     struct app_mbuf_array mbuf_tx[APP_MAX_PORTS][APP_MAX_QUEUES];
 
     /* Buffer pool */
@@ -223,7 +224,7 @@ struct app_params {
     // uint32_t pipeline_type;
 
     /* things about forwarding table */
-    struct app_fwd_table_item fwd_table[FORWARD_ENTRY];
+    struct app_fwd_table_item fwd_table[APP_MAX_PORTS][FORWARD_ENTRY];
     char ft_name[MAX_NAME_LEN]; /* forward table name */
     struct rte_hash* l2_hash[APP_MAX_PORTS];
     uint64_t fwd_item_valid_time; /* valide time of forward item, in CPU cycles */
@@ -243,7 +244,7 @@ void app_print_usage(void);
 void app_init(void);
 int app_lcore_main_loop(void *arg);
 
-void app_main_loop_rx(void);
+void app_main_loop_rx(uint32_t);
 void app_main_loop_forwarding(uint32_t);
 void app_main_loop_tx_each_port(uint32_t);
 void app_main_loop_tx(void);
@@ -286,6 +287,8 @@ int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt);
 uint32_t qlen_threshold_equal_division(uint32_t port_id);
 /* dynamic threshold */
 uint32_t qlen_threshold_dt(uint32_t port_id);
+/* enhancing dynamic threshold */
+uint32_t qlen_threshold_edt(uint32_t port_id);
 
 
 #define APP_FLUSH 0
