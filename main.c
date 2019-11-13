@@ -60,6 +60,7 @@ app_quit(void) {
 
 int
 main(int argc, char **argv) {
+
     uint32_t lcore;
     int ret;
 

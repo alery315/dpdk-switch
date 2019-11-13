@@ -3,6 +3,14 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/time.h>
+#include <time.h>
+
+int64_t getCurrentTime()      //直接调用这个函数就行了，返回值最好是int64_t，long long应该也可以
+{
+    struct timeval tv;
+    gettimeofday(&tv,NULL);    //该函数在sys/time.h头文件中
+    return tv.tv_sec * 1000 + tv.tv_usec / 1000;
+}
 
 int main()
 {
@@ -38,24 +46,35 @@ int main()
     struct timeval start, end;
     int a = 2,b = 3;
     gettimeofday( &start, NULL );
-    for (long i = 0; i < 9999999999; i++) {
-        if((a & b)) {
-
-        }
-    }
+//    for (long i = 0; i < 999999; i++) {
+//        if((a & b)) {
+//
+//        }
+//    }
+    sleep(1);
     gettimeofday( &end, NULL );
-    int timeuse = 1000000 * ( end.tv_sec - start.tv_sec ) + end.tv_usec -start.tv_usec;
+    int timeuse = 1000000 * ( end.tv_sec - start.tv_sec ) + end.tv_usec - start.tv_usec;
     printf("time: %d us\n", timeuse);
 
     gettimeofday( &start, NULL );
-    for (long i = 0; i < 9999999999; i++) {
-        if(a < b) {
-
-        }
-    }
+    sleep(1);
+//    for (long i = 0; i < 999999; i++) {
+//        if(a < b) {
+//
+//        }
+//    }
     gettimeofday( &end, NULL );
     timeuse = 1000000 * ( end.tv_sec - start.tv_sec ) + end.tv_usec -start.tv_usec;
     printf("time: %d us\n", timeuse);
+
+    printf("%ld\n", getCurrentTime());
+    sleep(1);
+    printf("%ld\n", getCurrentTime());
+
+    timeGet
+
+    return 0;
+
 
     return 0;
 

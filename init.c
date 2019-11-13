@@ -37,7 +37,7 @@ struct app_params app = {
     .burst_size_worker_read = 1,
     .burst_size_worker_write = 1,
     .burst_size_tx_read = 1,
-    .burst_size_tx_write = 4,
+    .burst_size_tx_write = 1,
 
     /* forwarding things */
     .ft_name = "Forwarding Table",
@@ -157,6 +157,7 @@ app_init_rings(void) {
     }
 
     // init tx_ring
+    // printf("topower2(buff_size_bytes) is %u", topower2(app.buff_size_bytes));
     app.ring_tx_size = (topower2(app.buff_size_bytes / MEAN_PKT_SIZE) << 2);
     for (i = 0; i < app.n_ports; i++) {
         char name[32];

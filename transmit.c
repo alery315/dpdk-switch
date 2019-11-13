@@ -138,6 +138,32 @@ void app_main_tx_port(uint32_t port_id) {
         app.qlen_bytes_out[port_id] += pkt->pkt_len;
         app.qlen_pkts_out[port_id] ++;
         app.qlen_pkts_out_queue[port_id][q] ++;
+
+        // EDT
+        if (app.edt_policy) {
+            // ??
+            if (!app.flag[port_id]) {
+                app.counter1[port_id] = 0;
+            }
+            app.counter1[port_id]++;
+            if (app.counter1[port_id] == app.C1) {
+                app.counter2[port_id] = 0;
+                app.isUnControl[port_id] = 0;
+                printf("*********************%u is control C1 out****************\n", port_id);
+            }
+            if (app.counter2[port_id] > 0) {
+                app.counter2[port_id]--;
+            }
+
+//            printf("------------------------------------------port %u counter2 is des %u\n", port_id,
+//                   app.counter2[port_id]);
+
+            if (app.isUnControl[port_id] && rte_get_tsc_cycles() - app.time2[port_id] > app.scale_max_burst_time) {
+                app.isUnControl[port_id] = 0;
+            }
+
+        }
+
         if (app.tx_rate_mbps > 0) {
             token -= pkt->pkt_len;
             app.token[port_id] = token;

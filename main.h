@@ -160,11 +160,25 @@ struct app_params {
     uint32_t port_rx_ring_size;
     uint32_t port_tx_ring_size;
 
+    /* EDT parameters */
+    uint32_t counter1[APP_MAX_PORTS];
+    uint32_t counter2[APP_MAX_PORTS];
+    uint64_t time1[APP_MAX_PORTS];
+    uint64_t time2[APP_MAX_PORTS];
+    uint64_t max_burst_time;
+    uint64_t T1;
+    uint64_t scale_max_burst_time;
+    uint64_t scale_T1;
+    uint8_t flag[APP_MAX_PORTS];
+    uint8_t isUnControl[APP_MAX_PORTS];
+    uint32_t C1, C2;
+
     /* buffer size */
     uint32_t buff_size_bytes;
     uint32_t buff_size_per_port_bytes;
     uint32_t
         shared_memory:1, /* whether enable shared memory */
+        edt_policy:1,
         /* whether log queue length and the file to put log in */
         log_qlen:1,
         /* the port to log queue length */

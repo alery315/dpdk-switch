@@ -19,7 +19,15 @@ qlen_threshold_dt(uint32_t port_id) {
 
 uint32_t
 qlen_threshold_edt(uint32_t port_id){
-
+    if (app.isUnControl[port_id]) {
+        uint8_t n_unControl = 0;
+        for (uint8_t i = 0; i < app.n_ports; i++) {
+            n_unControl++;
+        }
+//        printf("port %u is uncontrol, threshold is %u\n", port_id, app.buff_size_bytes / n_unControl);
+        return app.buff_size_bytes / n_unControl;
+    }
+    return ((app.buff_size_bytes - get_buff_occu_bytes()) << app.dt_shift_alpha);
 }
 
 // 已经进来 - 已经出去 = 还在输出队列中的占用着buf的
@@ -37,24 +45,24 @@ uint32_t get_buff_occu_bytes(void) {
     //return app.buff_bytes_in - app.buff_bytes_out;
 }
 
-static int mark_packet_with_ecn(struct rte_mbuf *pkt) {
-    struct ipv4_hdr *iphdr;
-    uint16_t cksum;
-    if (RTE_ETH_IS_IPV4_HDR(pkt->packet_type)) {
-        iphdr = rte_pktmbuf_mtod_offset(pkt, struct ipv4_hdr *, sizeof(struct ether_hdr));
-        if ((iphdr->type_of_service & 0x03) != 0) {
-            iphdr->type_of_service |= 0x3;
-            iphdr->hdr_checksum = 0;
-            cksum = rte_ipv4_cksum(iphdr);
-            iphdr->hdr_checksum = cksum;
-        } else {
-            return -2;
-        }
-        return 0;
-    } else {
-        return -1;
-    }
-}
+//static int mark_packet_with_ecn(struct rte_mbuf *pkt) {
+//    struct ipv4_hdr *iphdr;
+//    uint16_t cksum;
+//    if (RTE_ETH_IS_IPV4_HDR(pkt->packet_type)) {
+//        iphdr = rte_pktmbuf_mtod_offset(pkt, struct ipv4_hdr *, sizeof(struct ether_hdr));
+//        if ((iphdr->type_of_service & 0x03) != 0) {
+//            iphdr->type_of_service |= 0x3;
+//            iphdr->hdr_checksum = 0;
+//            cksum = rte_ipv4_cksum(iphdr);
+//            iphdr->hdr_checksum = cksum;
+//        } else {
+//            return -2;
+//        }
+//        return 0;
+//    } else {
+//        return -1;
+//    }
+//}
 
 /**
  * 数据包进入队列
@@ -68,7 +76,8 @@ static int mark_packet_with_ecn(struct rte_mbuf *pkt) {
  * -3 Cannot mark packet with ECN, drop packet
  */
 int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt) {
-    int ret = 0, mark_pkt = 0, mark_ret;
+    int ret = 0;
+    // int mark_pkt = 0, mark_ret;
     // 获取目标端口的queue长度,bytes为单位,in - out,就是还在交换机中的数据,占用了缓存的数据量
 
     uint32_t qlen_bytes = get_qlen_bytes(dst_port);
@@ -89,8 +98,8 @@ int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt) 
         buff_occu_bytes = get_buff_occu_bytes();
         // get_threshold 获得阈值回调函数,可以根据配置文件读取,equal division 或者 DT
         threshold = app.get_threshold(dst_port);
-
 //        threshold = 8096 * 1024;
+
 
         // 大于阈值了 或者 大于总buf长度了
         if (qlen_enque > threshold) {
@@ -103,14 +112,14 @@ int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt) 
     }
 
     // ECN marking
-    if (ret == 0 && mark_pkt) {
-        /* do ecn marking */
-        mark_ret = mark_packet_with_ecn(pkt);
-        if (mark_ret < 0) {
-            ret = -3;
-        }
-        /* end */
-    }
+//    if (ret == 0 && mark_pkt) {
+//        /* do ecn marking */
+//        mark_ret = mark_packet_with_ecn(pkt);
+//        if (mark_ret < 0) {
+//            ret = -3;
+//        }
+//        /* end */
+//    }
 
     // ret为0,表示正常情况,可以进入队列,否则丢包,free掉这个packet
     if (ret == 0) {
@@ -136,7 +145,52 @@ int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt) 
             // 更新输出队列 in pkt
             app.qlen_pkts_in[dst_port]++;
             app.qlen_pkts_in_queue[dst_port][dst_queue]++;
-            app.queue_priority[dst_port] &= dst_queue;
+
+            /* enqueue */
+            if (app.edt_policy) {
+
+                app.counter1[dst_port] = 0;
+
+//                if (!app.flag[dst_port]) {
+//                    app.counter1[dst_port] = 0;
+//                }
+
+                if (app.flag[dst_port]) {
+                    app.counter2[dst_port] = 0;
+                } else {
+                    app.counter2[dst_port]++;
+                }
+
+                //printf("------------------------------------------port %u counter2 is inc %u\n", dst_port,
+                //       app.counter2[dst_port]);
+
+                if (app.counter2[dst_port] == app.C2) {
+                    app.time2[dst_port] = rte_get_tsc_cycles();
+                    app.isUnControl[dst_port] = 1;
+                    printf("*********************%u is uncontrol****************\n", dst_port);
+                }
+
+//                if (app.counter1[dst_port] == app.C1) {
+//                    app.isUnControl[dst_port] = 0;
+//                }
+
+                if (app.isUnControl[dst_port] && rte_get_tsc_cycles() - app.time2[dst_port] > app.scale_max_burst_time) {
+                    app.isUnControl[dst_port] = 0;
+                    printf("*********************%u is control time expired****************\n", dst_port);
+                }
+
+                // 假如出队列不更新状态,是否会锁死直到下一个包进来
+                if (app.flag[dst_port] || app.isUnControl[dst_port]) {
+                    app.time1[dst_port] = rte_get_tsc_cycles();
+                }
+
+                app.flag[dst_port] = rte_get_tsc_cycles() - app.time1[dst_port] > app.scale_T1 || app.isUnControl[dst_port];
+
+
+            }
+
+
+//            app.queue_priority[dst_port] &= dst_queue;
             /*app.buff_bytes_in += pkt->pkt_len;
             app.buff_pkts_in ++;*/
         }
@@ -175,6 +229,8 @@ int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt) 
         */
     } else {
         rte_pktmbuf_free(pkt);
+
+        app.counter2[dst_port] = 0;
     }
     switch (ret) {
     case 0:

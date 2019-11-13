@@ -35,6 +35,7 @@ log_threshold(uint32_t port_id) {
             threshold / 1024,
             get_buff_occu_bytes() / 1024
     );
+    printf("port is %u, counter1 is %u, counter2 is %u\n", port_id, app.counter1[port_id], app.counter2[port_id]);
 }
 
 static void
@@ -92,7 +93,7 @@ app_main_loop_logging(void) {
 
 //        log_transmit_args(i);
 
-        sleep(2);
+        sleep(1);
     }
 }
 

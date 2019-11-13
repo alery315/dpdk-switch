@@ -124,6 +124,7 @@ app_read_config_file(const char *fname) {
     app.buff_size_bytes = (app_cfg.buffer_size_kb > 0 ? (app_cfg.buffer_size_kb<<10) : app.buff_size_bytes);
     if (app_cfg.shared_memory) {
         app.shared_memory = 1;
+        app.edt_policy = 0;
         if (!strcmp(app_cfg.bm_policy, "ED")) {
             app.get_threshold = qlen_threshold_equal_division;
             RTE_LOG(
@@ -135,6 +136,8 @@ app_read_config_file(const char *fname) {
             );
         } else if (!strcmp(app_cfg.bm_policy, "DT")) {
             app.get_threshold = qlen_threshold_dt;
+            app.max_burst_time = 100; // 实际为10ms,为了避免浮点数计算
+            app.T1 = 21;
             app.dt_shift_alpha = (app_cfg.dt_shift_alpha >= 0 ? app_cfg.dt_shift_alpha : app.dt_shift_alpha);
             RTE_LOG(
                     INFO, SWITCH,
@@ -146,6 +149,11 @@ app_read_config_file(const char *fname) {
             );
         }else if (!strcmp(app_cfg.bm_policy, "EDT")) {
             app.get_threshold = qlen_threshold_edt;
+            app.edt_policy = 1;
+            app.C1 = 120;
+            app.C2 = 320;
+            app.max_burst_time = 100; // 实际为10ms,扩大10倍,为了避免浮点数计算
+            app.T1 = 21;
             app.dt_shift_alpha = (app_cfg.dt_shift_alpha >= 0 ? app_cfg.dt_shift_alpha : app.dt_shift_alpha);
             RTE_LOG(
                     INFO, SWITCH,
@@ -319,12 +327,12 @@ app_parse_args(int argc, char **argv) {
     }
 
     // 前俩核一个rx,一个worker,剩下的为每个端口的tx分配一个核,最后一个核做log
-    
+
     // rx 改为多核
     for(i = 0; i < app.n_ports; i++){
         app.core_rx[i] = lcores[i];
     }
-    
+
 //    app.core_worker = lcores[1];
     for (i = 0; i < app.n_ports; i++) {
         app.core_worker[i] = lcores[i + app.n_ports];

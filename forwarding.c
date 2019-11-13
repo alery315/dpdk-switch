@@ -182,6 +182,15 @@ app_main_loop_forwarding(uint32_t port_id) {
 
     // cpu_freq[lcore] = cpu自启动后的运行时钟周期
     app.cpu_freq[rte_lcore_id()] = rte_get_tsc_hz();
+
+    app.scale_max_burst_time = rte_get_tsc_hz() * app.max_burst_time / 10000;
+    app.scale_T1 = rte_get_tsc_hz() * app.T1 / 10000;
+    printf("lcore is %u, max_burst_time: %ld\n", rte_lcore_id(), app.scale_max_burst_time);
+    printf("lcore is %u, T1_time: %ld\n", rte_lcore_id(), app.scale_T1);
+
+//    app.start_time = rte_get_tsc_cycles();
+
+
     // 转发item有效时间 时钟周期 / 1000 * 整型最大值
     app.fwd_item_valid_time = app.cpu_freq[rte_lcore_id()] / 1000 * VALID_TIME;
 
@@ -217,6 +226,11 @@ app_main_loop_forwarding(uint32_t port_id) {
     // ret_ring 指针,存放数据的指针数组,0为成功出队
 
     for (q = 0; !force_quit; q = ((q + 1) & (queues - 1))) {
+
+//        if (rte_get_tsc_cycles() - app.start_time > app.scale_max_burst_time && rte_lcore_id() == app.core_worker[1]) {
+//            printf("lcore is %u,100ms is ok\n", rte_lcore_id());
+//            app.start_time = rte_get_tsc_cycles();
+//        }
 
         ret = rte_ring_sc_dequeue(
                 app.rings_rx[port_id][q],
