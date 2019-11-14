@@ -136,6 +136,10 @@ struct app_configs {
     long ecn_thresh_kb;
     long tx_rate_mbps;
     long bucket_size; /* bucket size (in bytes) of TBF algorithm */
+    long C1;
+    long C2;
+    long max_burst_time;
+    long T1;
     cfg_t *cfg;
 };
 
@@ -173,12 +177,16 @@ struct app_params {
     uint8_t isUnControl[APP_MAX_PORTS];
     uint32_t C1, C2;
 
+    /* AWA parameters */
+    double priority_alpha[APP_MAX_QUEUES];
+
     /* buffer size */
     uint32_t buff_size_bytes;
     uint32_t buff_size_per_port_bytes;
     uint32_t
         shared_memory:1, /* whether enable shared memory */
         edt_policy:1,
+        awa_policy:1,
         /* whether log queue length and the file to put log in */
         log_qlen:1,
         /* the port to log queue length */
@@ -203,12 +211,14 @@ struct app_params {
     uint32_t buff_pkts_out;
     /* queue length*/
     /*rte_rwlock_t lock_qlen[APP_MAX_PORTS];*/
-    uint32_t qlen_bytes_in[APP_MAX_PORTS];
-    uint32_t qlen_bytes_out[APP_MAX_PORTS];
-    uint32_t qlen_pkts_in[APP_MAX_PORTS];
-    uint32_t qlen_pkts_out[APP_MAX_PORTS];
-    uint32_t qlen_pkts_in_queue[APP_MAX_PORTS][APP_MAX_QUEUES];
-    uint32_t qlen_pkts_out_queue[APP_MAX_PORTS][APP_MAX_QUEUES];
+    uint64_t qlen_bytes_in[APP_MAX_PORTS];
+    uint64_t qlen_bytes_out[APP_MAX_PORTS];
+    uint64_t qlen_pkts_in[APP_MAX_PORTS];
+    uint64_t qlen_pkts_out[APP_MAX_PORTS];
+    uint64_t qlen_pkts_in_queue[APP_MAX_PORTS][APP_MAX_QUEUES];
+    uint64_t qlen_pkts_out_queue[APP_MAX_PORTS][APP_MAX_QUEUES];
+    uint64_t qlen_bytes_in_queue[APP_MAX_PORTS][APP_MAX_QUEUES];
+    uint64_t qlen_bytes_out_queue[APP_MAX_PORTS][APP_MAX_QUEUES];
     uint32_t queue_priority[APP_MAX_PORTS];
     /* Rings */
     struct rte_ring *rings_rx[APP_MAX_PORTS][APP_MAX_QUEUES];
@@ -284,8 +294,8 @@ int app_l2_learning(const struct ether_addr* srcaddr, uint8_t port);
  */
 int app_l2_lookup(const struct ether_addr* addr, uint8_t port_id);
 
-uint32_t get_qlen_bytes(uint32_t port_id);
-uint32_t get_buff_occu_bytes(void);
+uint64_t get_qlen_bytes(uint32_t port_id);
+uint64_t get_buff_occu_bytes(void);
 /*
  * Wrapper for enqueue
  * Returns:
@@ -303,6 +313,7 @@ uint32_t qlen_threshold_equal_division(uint32_t port_id);
 uint32_t qlen_threshold_dt(uint32_t port_id);
 /* enhancing dynamic threshold */
 uint32_t qlen_threshold_edt(uint32_t port_id);
+uint32_t qlen_threshold_awa(uint32_t port_id);
 
 
 #define APP_FLUSH 0

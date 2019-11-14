@@ -71,7 +71,6 @@ int main()
     sleep(1);
     printf("%ld\n", getCurrentTime());
 
-    timeGet
 
     return 0;
 

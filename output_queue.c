@@ -30,14 +30,20 @@ qlen_threshold_edt(uint32_t port_id){
     return ((app.buff_size_bytes - get_buff_occu_bytes()) << app.dt_shift_alpha);
 }
 
+uint32_t
+qlen_threshold_awa(uint32_t queue_id) {
+    return ((app.buff_size_bytes - get_buff_occu_bytes()) * app.priority_alpha[queue_id]);
+}
+
 // 已经进来 - 已经出去 = 还在输出队列中的占用着buf的
-uint32_t get_qlen_bytes(uint32_t port_id) {
+uint64_t get_qlen_bytes(uint32_t port_id) {
     return app.qlen_bytes_in[port_id] - app.qlen_bytes_out[port_id];
 }
 
 // 获得总buf占用,byte为单位
-uint32_t get_buff_occu_bytes(void) {
-    uint32_t i, result = 0;
+uint64_t get_buff_occu_bytes(void) {
+    uint64_t result = 0;
+    uint32_t i;
     for (i = 0; i < app.n_ports; i++) {
         result += (app.qlen_bytes_in[i] - app.qlen_bytes_out[i]);
     }
@@ -97,7 +103,14 @@ int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt) 
         // ------------???这个地方是否需要换到下面去执行,因为中间几行代码有执行时延--------
         buff_occu_bytes = get_buff_occu_bytes();
         // get_threshold 获得阈值回调函数,可以根据配置文件读取,equal division 或者 DT
-        threshold = app.get_threshold(dst_port);
+        if (app.awa_policy) {
+            threshold = app.get_threshold(dst_queue);
+            qlen_enque = app.qlen_bytes_in_queue[dst_port][dst_queue] - app.qlen_bytes_out_queue[dst_port][dst_queue];
+            qlen_enque += pkt->pkt_len;
+        } else{
+            threshold = app.get_threshold(dst_port);
+        }
+
 //        threshold = 8096 * 1024;
 
 
@@ -142,9 +155,11 @@ int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt) 
 //                    __func__, app.ports[dst_port], dst_queue
 //            );
             app.qlen_bytes_in[dst_port] += pkt->pkt_len;
+            app.qlen_bytes_in_queue[dst_port][dst_queue] += pkt->pkt_len;
             // 更新输出队列 in pkt
             app.qlen_pkts_in[dst_port]++;
-            app.qlen_pkts_in_queue[dst_port][dst_queue]++;
+            app.qlen_pkts_in_queue[dst_port][dst_queue] ++;
+            app.queue_priority[dst_port] = dst_queue > app.queue_priority[dst_port] ? dst_queue : app.queue_priority[dst_port];
 
             /* enqueue */
             if (app.edt_policy) {
@@ -161,8 +176,8 @@ int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt) 
                     app.counter2[dst_port]++;
                 }
 
-                //printf("------------------------------------------port %u counter2 is inc %u\n", dst_port,
-                //       app.counter2[dst_port]);
+                printf("------------------------------------------port %u counter2 is inc %u\n", dst_port,
+                       app.counter2[dst_port]);
 
                 if (app.counter2[dst_port] == app.C2) {
                     app.time2[dst_port] = rte_get_tsc_cycles();

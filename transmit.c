@@ -97,7 +97,12 @@ void app_main_tx_port(uint32_t port_id) {
     int ret;
 
     // 优先级排空的问题在这里更改
-    for (q = 0; q < queues && !force_quit; q++) {
+    for (q = 0; !force_quit; q = ((q + 1) & (queues - 1))) {
+
+        if (app.queue_priority[port_id] > q) {
+            continue;
+        }
+
         prev_time = app.prev_time[port_id];
         // tx_rate的放大倍数uint64_t tx_rate_scale
         tx_rate_scale = app.tx_rate_scale[port_id];
@@ -136,8 +141,10 @@ void app_main_tx_port(uint32_t port_id) {
          */
         pkt = app.mbuf_tx[port_id][q].array[n_mbufs];
         app.qlen_bytes_out[port_id] += pkt->pkt_len;
+        app.qlen_bytes_out_queue[port_id][q] += pkt->pkt_len;
         app.qlen_pkts_out[port_id] ++;
         app.qlen_pkts_out_queue[port_id][q] ++;
+
 
         // EDT
         if (app.edt_policy) {
@@ -155,8 +162,8 @@ void app_main_tx_port(uint32_t port_id) {
                 app.counter2[port_id]--;
             }
 
-//            printf("------------------------------------------port %u counter2 is des %u\n", port_id,
-//                   app.counter2[port_id]);
+            printf("------------------------------------------port %u counter2 is des %u\n", port_id,
+                   app.counter2[port_id]);
 
             if (app.isUnControl[port_id] && rte_get_tsc_cycles() - app.time2[port_id] > app.scale_max_burst_time) {
                 app.isUnControl[port_id] = 0;

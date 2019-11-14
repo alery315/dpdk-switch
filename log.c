@@ -8,7 +8,7 @@ log_qlen_info(uint32_t port_id) {
     uint32_t q, queues = app.n_queues;
     RTE_LOG(
             INFO, SWITCH,
-            "%s: ------------------------------port is %u, bytes_buffer is %u KiB, pkt_buffer is %u\n",
+            "%s: ------------------------------port is %u, bytes_buffer is %lu KiB, pkt_buffer is %lu\n",
             __func__, port_id,
             (app.qlen_bytes_in[port_id] - app.qlen_bytes_out[port_id]) / 1024,
             app.qlen_pkts_in[port_id] - app.qlen_pkts_out[port_id]
@@ -16,10 +16,10 @@ log_qlen_info(uint32_t port_id) {
     for (q = 0; q < queues; q++) {
         RTE_LOG(
                 INFO, SWITCH,
-                "%s: port is %u, queue is %u, pkt_buffer is %u packets\n",
+                "%s: port is %u, queue is %u, bytes_buffer is %lu \n",
                 __func__, port_id,
                 q,
-                app.qlen_pkts_in_queue[port_id][q] - app.qlen_pkts_out_queue[port_id][q]
+                (app.qlen_bytes_in_queue[port_id][q] - app.qlen_bytes_out_queue[port_id][q]) / 1024
         );
     }
 }
@@ -29,7 +29,7 @@ log_threshold(uint32_t port_id) {
     uint32_t threshold = app.get_threshold(port_id);
     RTE_LOG(
             INFO, SWITCH,
-            "%s: ---------------------------------------------------------the threshold of port %d is > %u, buffer occu is %u\n",
+            "%s: ---------------------------------------------------------the threshold of port %d is > %u, buffer occu is %lu\n",
             __func__,
             port_id,
             threshold / 1024,

@@ -85,6 +85,10 @@ app_read_config_file(const char *fname) {
         .ecn_thresh_kb = -1,
         .tx_rate_mbps = -1,
         .bucket_size = -1,
+        .C1 = -1,
+        .C2 = -1,
+        .max_burst_time = -1,
+        .T1 = -1,
         .cfg = NULL
     };
     cfg_opt_t opts[] = {
@@ -99,6 +103,10 @@ app_read_config_file(const char *fname) {
         CFG_SIMPLE_INT("ecn_threshold", &app_cfg.ecn_thresh_kb),
         CFG_SIMPLE_INT("tx_rate_mbps", &app_cfg.tx_rate_mbps),
         CFG_SIMPLE_INT("bucket_size", &app_cfg.bucket_size),
+        CFG_SIMPLE_INT("C1",&app_cfg.C1),
+        CFG_SIMPLE_INT("C2",&app_cfg.C2),
+        CFG_SIMPLE_INT("max_burst_time",&app_cfg.max_burst_time),
+        CFG_SIMPLE_INT("T1",&app_cfg.T1),
         CFG_END()
     };
     app_cfg.cfg = cfg_init(opts, 0);
@@ -125,6 +133,7 @@ app_read_config_file(const char *fname) {
     if (app_cfg.shared_memory) {
         app.shared_memory = 1;
         app.edt_policy = 0;
+        app.awa_policy = 0;
         if (!strcmp(app_cfg.bm_policy, "ED")) {
             app.get_threshold = qlen_threshold_equal_division;
             RTE_LOG(
@@ -150,10 +159,10 @@ app_read_config_file(const char *fname) {
         }else if (!strcmp(app_cfg.bm_policy, "EDT")) {
             app.get_threshold = qlen_threshold_edt;
             app.edt_policy = 1;
-            app.C1 = 120;
-            app.C2 = 320;
-            app.max_burst_time = 100; // 实际为10ms,扩大10倍,为了避免浮点数计算
-            app.T1 = 21;
+            app.C1 = (app_cfg.C1 >= 0 ? app_cfg.C1 : app.C1);
+            app.C2 = (app_cfg.C2 >= 0 ? app_cfg.C2 : app.C2);
+            app.max_burst_time = (app_cfg.max_burst_time >= 0 ? app_cfg.max_burst_time : app.max_burst_time);
+            app.T1 = (app_cfg.T1 >= 0 ? app_cfg.T1 : app.T1);
             app.dt_shift_alpha = (app_cfg.dt_shift_alpha >= 0 ? app_cfg.dt_shift_alpha : app.dt_shift_alpha);
             RTE_LOG(
                     INFO, SWITCH,
@@ -163,6 +172,33 @@ app_read_config_file(const char *fname) {
                     app.buff_size_bytes/1024,
                     app.dt_shift_alpha
             );
+            RTE_LOG(
+                    INFO, SWITCH,
+                    "%s: EDT paras: C1: %d, C2: %d, max_burst_time: %.1fms, T1: %.1fms\n",
+                    __func__,
+                    app.C1, app.C2,
+                    app.max_burst_time / 10.0, app.T1 / 10.0
+            );
+        }else if (!strcmp(app_cfg.bm_policy, "AWA")) {
+            app.get_threshold = qlen_threshold_awa;
+            app.awa_policy = 1;
+            RTE_LOG(
+                    INFO, SWITCH,
+                    "%s: shared memory enabled, bm_policy: AWA, buffer_size: %uB=%uKiB\n",
+                    __func__,
+                    app.buff_size_bytes,
+                    app.buff_size_bytes/1024
+            );
+            int t[] = {1, 4, 8, 32};
+            for (int32_t i = app.n_queues - 1; i >= 0; i--) {
+                app.priority_alpha[i] = t[i] / 8.0;
+                RTE_LOG(
+                        INFO, SWITCH,
+                        "%s: alpha of queue %u is %.2lf\n",
+                        __func__,
+                        i, app.priority_alpha[i]
+                );
+            }
         }else {
             RTE_LOG(
                 ERR, SWITCH,
@@ -246,7 +282,6 @@ app_read_config_file(const char *fname) {
 static void app_finish_config(void) {
     // 差不多281,474,977Mbps,不然计算过程中会整数溢出
     uint64_t max_tx_rate_mbps = (((uint64_t) 1 << (68 - RATE_SCALE)) / 1e6);
-
     /* 假如没有开启共享内存,把buffer平均给每个端口 */
     if (!app.shared_memory) {
         app.buff_size_per_port_bytes = app.buff_size_bytes / app.n_ports;
