@@ -166,7 +166,9 @@ struct app_params {
 
     /* EDT parameters */
     uint32_t counter1[APP_MAX_PORTS];
-    uint32_t counter2[APP_MAX_PORTS];
+    uint32_t counter2_e[APP_MAX_PORTS];
+    uint32_t counter2_d[APP_MAX_PORTS];
+
     uint64_t time1[APP_MAX_PORTS];
     uint64_t time2[APP_MAX_PORTS];
     uint64_t max_burst_time;

@@ -171,15 +171,16 @@ int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt) 
 //                }
 
                 if (app.flag[dst_port]) {
-                    app.counter2[dst_port] = 0;
+                    app.counter2_e[dst_port] = 0;
+                    app.counter2_d[dst_port] = 0;
                 } else {
-                    app.counter2[dst_port]++;
+                    app.counter2_e[dst_port]++;
                 }
 
-                printf("------------------------------------------port %u counter2 is inc %u\n", dst_port,
-                       app.counter2[dst_port]);
+//                printf("------------------------------------------port %u counter2_e is %u\n", dst_port,
+//                       app.counter2_e[dst_port]);
 
-                if (app.counter2[dst_port] == app.C2) {
+                if (app.counter2_e[dst_port] - app.counter2_d[dst_port] == app.C2) {
                     app.time2[dst_port] = rte_get_tsc_cycles();
                     app.isUnControl[dst_port] = 1;
                     printf("*********************%u is uncontrol****************\n", dst_port);
@@ -245,7 +246,8 @@ int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt) 
     } else {
         rte_pktmbuf_free(pkt);
 
-        app.counter2[dst_port] = 0;
+        app.counter2_e[dst_port] = 0;
+        app.counter2_d[dst_port] = 0;
     }
     switch (ret) {
     case 0:

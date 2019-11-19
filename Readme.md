@@ -3,6 +3,8 @@ base code is from [dfshan's dpdk-switch](https://github.com/dfshan/dpdk-switch)
 
 i will add (multi-priority) multi-queue for every port.
 
+i will add some policy on it.
+
 i will change some code implement.
 
 This is a l2 learning switch based on DPDK.
@@ -11,7 +13,10 @@ This is a l2 learning switch based on DPDK.
 * ECN marking
 * Fine-grained queue length monitoring
 * Shared Memory
-* *(multi-priority) multi-queue*
+* (multi-priority) multi-queue
+* AWA Policy
+* DT Policy
+* *EDT Policy*
 
 # Requirements
 * [DPDK](http://dpdk.org/) == 17.08.1
