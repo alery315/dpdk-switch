@@ -173,7 +173,7 @@ app_main_loop_forwarding(uint32_t port_id) {
     uint16_t priority;
     // 通用rte_mbuf,包含数据包的mbuf,它的指针
     struct rte_mbuf* new_pkt;
-    uint32_t i, j, q;
+    uint32_t j, q;
     uint32_t queues = app.n_queues;
     int dst_port;
 

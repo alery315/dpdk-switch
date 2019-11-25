@@ -165,9 +165,9 @@ struct app_params {
     uint32_t port_tx_ring_size;
 
     /* EDT parameters */
-    uint32_t counter1[APP_MAX_PORTS];
-    uint32_t counter2_e[APP_MAX_PORTS];
-    uint32_t counter2_d[APP_MAX_PORTS];
+    int64_t counter1[APP_MAX_PORTS];
+    int64_t counter2_e[APP_MAX_PORTS];
+    int64_t counter2_d[APP_MAX_PORTS];
 
     uint64_t time1[APP_MAX_PORTS];
     uint64_t time2[APP_MAX_PORTS];
@@ -177,7 +177,7 @@ struct app_params {
     uint64_t scale_T1;
     uint8_t flag[APP_MAX_PORTS];
     uint8_t isUnControl[APP_MAX_PORTS];
-    uint32_t C1, C2;
+    int64_t C1, C2;
 
     /* AWA parameters */
     double priority_alpha[APP_MAX_QUEUES];

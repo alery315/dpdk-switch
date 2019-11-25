@@ -161,8 +161,8 @@ app_read_config_file(const char *fname) {
             app.edt_policy = 1;
             app.C1 = (app_cfg.C1 >= 0 ? app_cfg.C1 : app.C1);
             app.C2 = (app_cfg.C2 >= 0 ? app_cfg.C2 : app.C2);
-            app.max_burst_time = (app_cfg.max_burst_time >= 0 ? app_cfg.max_burst_time : app.max_burst_time);
-            app.T1 = (app_cfg.T1 >= 0 ? app_cfg.T1 : app.T1);
+            app.max_burst_time = (app_cfg.max_burst_time >= 0 ? (uint64_t)app_cfg.max_burst_time : app.max_burst_time);
+            app.T1 = (app_cfg.T1 >= 0 ? (uint64_t)app_cfg.T1 : app.T1);
             app.dt_shift_alpha = (app_cfg.dt_shift_alpha >= 0 ? app_cfg.dt_shift_alpha : app.dt_shift_alpha);
             RTE_LOG(
                     INFO, SWITCH,
@@ -174,7 +174,7 @@ app_read_config_file(const char *fname) {
             );
             RTE_LOG(
                     INFO, SWITCH,
-                    "%s: EDT paras: C1: %d, C2: %d, max_burst_time: %.1fms, T1: %.1fms\n",
+                    "%s: EDT paras: C1: %ld, C2: %ld, max_burst_time: %.1fms, T1: %.1fms\n",
                     __func__,
                     app.C1, app.C2,
                     app.max_burst_time / 10.0, app.T1 / 10.0

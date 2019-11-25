@@ -153,8 +153,9 @@ void app_main_tx_port(uint32_t port_id) {
             if (!app.flag[port_id]) {
                 app.counter1[port_id] = 0;
             }
+
             app.counter1[port_id]++;
-            if (app.counter1[port_id] == app.C1) {
+            if (app.counter1[port_id] >= app.C1) {
                 app.counter2_e[port_id] = 0;
                 app.counter2_d[port_id] = 0;
                 app.isUnControl[port_id] = 0;
@@ -165,9 +166,9 @@ void app_main_tx_port(uint32_t port_id) {
 //            if (app.counter2_d[port_id] > 0) {
 //                app.counter2_d[port_id]++;
 //            }
-
-            app.counter2_d[port_id]++;
-
+            if (app.counter2_e[port_id] > app.counter2_d[port_id]) {
+                app.counter2_d[port_id]++;
+            }
 
 //            printf("------------------------------------------port %u counter2_d is %u\n", port_id,
 //                   app.counter2_d[port_id]);

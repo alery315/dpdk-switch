@@ -35,7 +35,7 @@ log_threshold(uint32_t port_id) {
             threshold / 1024,
             get_buff_occu_bytes() / 1024
     );
-    printf("port is %u, counter2_e is %u, counter2_d is %u, diff is %u\n",
+    printf("port is %u, counter2_e is %ld, counter2_d is %ld, diff is %ld\n",
             port_id,
             app.counter2_e[port_id],
             app.counter2_d[port_id],
