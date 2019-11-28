@@ -3,7 +3,7 @@
 struct app_params app = {
     /* Ports*/
     .n_ports = 1,
-    .n_queues = 4,
+    .n_queues = 8,
     .port_rx_ring_size = 128,
     .port_tx_ring_size = 32,
 
@@ -183,6 +183,7 @@ app_init_rings(void) {
         }
         app.qlen_bytes_in[i] = app.qlen_pkts_in[i] = 0;
         app.qlen_bytes_out[i] = app.qlen_pkts_out[i] = 0;
+        app.qlen_drop[i] = 0;
         app.queue_priority[i] = 0;
         app.counter2_e[i] = app.counter2_d[i] = 0;
     }

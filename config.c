@@ -25,9 +25,9 @@ app_parse_port_mask(const char *arg) {
 
     if (port_mask == 0) {
         RTE_LOG(
-            ERR, SWITCH,
-            "%s: no port specified\n",
-            __func__
+                ERR, SWITCH,
+                "%s: no port specified\n",
+                __func__
         );
         return -3;
     }
@@ -39,9 +39,9 @@ app_parse_port_mask(const char *arg) {
 
         if (app.n_ports >= APP_MAX_PORTS) {
             RTE_LOG(
-                ERR, SWITCH,
-                "%s: # of ports (%u) is larger than maximum supported port number (%u)\n",
-                __func__, app.n_ports, APP_MAX_PORTS
+                    ERR, SWITCH,
+                    "%s: # of ports (%u) is larger than maximum supported port number (%u)\n",
+                    __func__, app.n_ports, APP_MAX_PORTS
             );
             return -4;
         }
@@ -49,10 +49,10 @@ app_parse_port_mask(const char *arg) {
         app.ports[app.n_ports] = i;
 
         RTE_LOG(
-            INFO, SWITCH,
-            "%s: port map: app.n_ports[%u] = %u\n",
-            __func__,
-            app.n_ports, i
+                INFO, SWITCH,
+                "%s: port map: app.n_ports[%u] = %u\n",
+                __func__,
+                app.n_ports, i
         );
 
         app.n_ports++;
@@ -60,9 +60,9 @@ app_parse_port_mask(const char *arg) {
 
     if (!rte_is_power_of_2(app.n_ports)) {
         RTE_LOG(
-            WARNING, SWITCH,
-            "%s: # of ports (%u) is not power of 2\n",
-            __func__, app.n_ports
+                WARNING, SWITCH,
+                "%s: # of ports (%u) is not power of 2\n",
+                __func__, app.n_ports
         );
         return -5;
     }
@@ -74,48 +74,50 @@ app_parse_port_mask(const char *arg) {
 static int
 app_read_config_file(const char *fname) {
     struct app_configs app_cfg = {
-        .shared_memory = cfg_false,
-        .buffer_size_kb = -1,
-        .dt_shift_alpha = -1,
-        .bm_policy = NULL,
-        .qlen_fname = NULL,
-        .log_qlen = cfg_false,
-        .log_qlen_port = -1,
-        .ecn_enable = cfg_false,
-        .ecn_thresh_kb = -1,
-        .tx_rate_mbps = -1,
-        .bucket_size = -1,
-        .C1 = -1,
-        .C2 = -1,
-        .max_burst_time = -1,
-        .T1 = -1,
-        .cfg = NULL
+            .shared_memory = cfg_false,
+            .buffer_size_kb = -1,
+            .dt_shift_alpha = -1,
+            .bm_policy = NULL,
+            .qlen_fname = NULL,
+            .log_qlen = cfg_false,
+            .log_qlen_port = -1,
+            .ecn_enable = cfg_false,
+            .ecn_thresh_kb = -1,
+            .tx_rate_mbps = -1,
+            .bucket_size = -1,
+            .C1 = -1,
+            .C2 = -1,
+            .max_burst_time = -1,
+            .T1 = -1,
+            .RL_init_threshold = -1,
+            .cfg = NULL
     };
     cfg_opt_t opts[] = {
-        CFG_SIMPLE_BOOL("shared_memory", &app_cfg.shared_memory),
-        CFG_SIMPLE_INT("buffer_size", &app_cfg.buffer_size_kb),
-        CFG_SIMPLE_STR("buffer_management_policy", &app_cfg.bm_policy),
-        CFG_SIMPLE_INT("dt_shift_alpha", &app_cfg.dt_shift_alpha),
-        CFG_SIMPLE_BOOL("log_queue_length", &app_cfg.log_qlen),
-        CFG_SIMPLE_INT("log_queue_length_port", &app_cfg.log_qlen_port),
-        CFG_SIMPLE_STR("queue_length_file", &app_cfg.qlen_fname),
-        CFG_SIMPLE_BOOL("ecn_enable", &app_cfg.ecn_enable),
-        CFG_SIMPLE_INT("ecn_threshold", &app_cfg.ecn_thresh_kb),
-        CFG_SIMPLE_INT("tx_rate_mbps", &app_cfg.tx_rate_mbps),
-        CFG_SIMPLE_INT("bucket_size", &app_cfg.bucket_size),
-        CFG_SIMPLE_INT("C1",&app_cfg.C1),
-        CFG_SIMPLE_INT("C2",&app_cfg.C2),
-        CFG_SIMPLE_INT("max_burst_time",&app_cfg.max_burst_time),
-        CFG_SIMPLE_INT("T1",&app_cfg.T1),
-        CFG_END()
+            CFG_SIMPLE_BOOL("shared_memory", &app_cfg.shared_memory),
+            CFG_SIMPLE_INT("buffer_size", &app_cfg.buffer_size_kb),
+            CFG_SIMPLE_STR("buffer_management_policy", &app_cfg.bm_policy),
+            CFG_SIMPLE_INT("dt_shift_alpha", &app_cfg.dt_shift_alpha),
+            CFG_SIMPLE_BOOL("log_queue_length", &app_cfg.log_qlen),
+            CFG_SIMPLE_INT("log_queue_length_port", &app_cfg.log_qlen_port),
+            CFG_SIMPLE_STR("queue_length_file", &app_cfg.qlen_fname),
+            CFG_SIMPLE_BOOL("ecn_enable", &app_cfg.ecn_enable),
+            CFG_SIMPLE_INT("ecn_threshold", &app_cfg.ecn_thresh_kb),
+            CFG_SIMPLE_INT("tx_rate_mbps", &app_cfg.tx_rate_mbps),
+            CFG_SIMPLE_INT("bucket_size", &app_cfg.bucket_size),
+            CFG_SIMPLE_INT("C1", &app_cfg.C1),
+            CFG_SIMPLE_INT("C2", &app_cfg.C2),
+            CFG_SIMPLE_INT("max_burst_time", &app_cfg.max_burst_time),
+            CFG_SIMPLE_INT("T1", &app_cfg.T1),
+            CFG_SIMPLE_INT("RL_init_threshold", &app_cfg.RL_init_threshold),
+            CFG_END()
     };
     app_cfg.cfg = cfg_init(opts, 0);
     // 读文件错误,释放资源
     if (cfg_parse(app_cfg.cfg, fname) == CFG_FILE_ERROR) {
         RTE_LOG(
-            ERR, SWITCH,
-            "%s: Configuration file '%s' cannot open for reading.\n",
-            __func__, fname
+                ERR, SWITCH,
+                "%s: Configuration file '%s' cannot open for reading.\n",
+                __func__, fname
         );
         if (app_cfg.cfg != NULL) {
             cfg_free(app_cfg.cfg);
@@ -129,19 +131,20 @@ app_read_config_file(const char *fname) {
         return 1;
     }
     // buffer大小(单位:byte)
-    app.buff_size_bytes = (app_cfg.buffer_size_kb > 0 ? (app_cfg.buffer_size_kb<<10) : app.buff_size_bytes);
+    app.buff_size_bytes = (app_cfg.buffer_size_kb > 0 ? (app_cfg.buffer_size_kb << 10) : app.buff_size_bytes);
     if (app_cfg.shared_memory) {
         app.shared_memory = 1;
         app.edt_policy = 0;
         app.awa_policy = 0;
+        app.rl_policy = 0;
         if (!strcmp(app_cfg.bm_policy, "ED")) {
             app.get_threshold = qlen_threshold_equal_division;
             RTE_LOG(
-                INFO, SWITCH,
-                "%s: shared memory enabled, bm_policy: Equal Division, buffer_size: %uB=%uKiB\n",
-                __func__,
-                app.buff_size_bytes,
-                app.buff_size_bytes/1024
+                    INFO, SWITCH,
+                    "%s: shared memory enabled, bm_policy: Equal Division, buffer_size: %uB=%uKiB\n",
+                    __func__,
+                    app.buff_size_bytes,
+                    app.buff_size_bytes / 1024
             );
         } else if (!strcmp(app_cfg.bm_policy, "DT")) {
             app.get_threshold = qlen_threshold_dt;
@@ -153,23 +156,23 @@ app_read_config_file(const char *fname) {
                     "%s: shared memory enabled, bm_policy: Dynamic Threshold, buffer_size: %uB=%uKiB, dt_shift_alpha: %u\n",
                     __func__,
                     app.buff_size_bytes,
-                    app.buff_size_bytes/1024,
+                    app.buff_size_bytes / 1024,
                     app.dt_shift_alpha
             );
-        }else if (!strcmp(app_cfg.bm_policy, "EDT")) {
+        } else if (!strcmp(app_cfg.bm_policy, "EDT")) {
             app.get_threshold = qlen_threshold_edt;
             app.edt_policy = 1;
             app.C1 = (app_cfg.C1 >= 0 ? app_cfg.C1 : app.C1);
             app.C2 = (app_cfg.C2 >= 0 ? app_cfg.C2 : app.C2);
-            app.max_burst_time = (app_cfg.max_burst_time >= 0 ? (uint64_t)app_cfg.max_burst_time : app.max_burst_time);
-            app.T1 = (app_cfg.T1 >= 0 ? (uint64_t)app_cfg.T1 : app.T1);
+            app.max_burst_time = (app_cfg.max_burst_time >= 0 ? (uint64_t) app_cfg.max_burst_time : app.max_burst_time);
+            app.T1 = (app_cfg.T1 >= 0 ? (uint64_t) app_cfg.T1 : app.T1);
             app.dt_shift_alpha = (app_cfg.dt_shift_alpha >= 0 ? app_cfg.dt_shift_alpha : app.dt_shift_alpha);
             RTE_LOG(
                     INFO, SWITCH,
                     "%s: shared memory enabled, bm_policy: Enhancing Dynamic Threshold, buffer_size: %uB=%uKiB, dt_shift_alpha: %u\n",
                     __func__,
                     app.buff_size_bytes,
-                    app.buff_size_bytes/1024,
+                    app.buff_size_bytes / 1024,
                     app.dt_shift_alpha
             );
             RTE_LOG(
@@ -179,7 +182,7 @@ app_read_config_file(const char *fname) {
                     app.C1, app.C2,
                     app.max_burst_time / 10.0, app.T1 / 10.0
             );
-        }else if (!strcmp(app_cfg.bm_policy, "AWA")) {
+        } else if (!strcmp(app_cfg.bm_policy, "AWA")) {
             app.get_threshold = qlen_threshold_awa;
             app.awa_policy = 1;
             RTE_LOG(
@@ -187,11 +190,11 @@ app_read_config_file(const char *fname) {
                     "%s: shared memory enabled, bm_policy: AWA, buffer_size: %uB=%uKiB\n",
                     __func__,
                     app.buff_size_bytes,
-                    app.buff_size_bytes/1024
+                    app.buff_size_bytes / 1024
             );
-            int t[] = {1, 4, 8, 32};
+            int t[] = {1, 2, 4, 8, 16, 32, 64, 128};
             for (int32_t i = app.n_queues - 1; i >= 0; i--) {
-                app.priority_alpha[i] = t[i] / 8.0;
+                app.priority_alpha[i] = t[i] / 16.0;
                 RTE_LOG(
                         INFO, SWITCH,
                         "%s: alpha of queue %u is %.2lf\n",
@@ -199,11 +202,33 @@ app_read_config_file(const char *fname) {
                         i, app.priority_alpha[i]
                 );
             }
-        }else {
+        }else if (!strcmp(app_cfg.bm_policy, "RL")) {
+            app.rl_policy = 1;
             RTE_LOG(
-                ERR, SWITCH,
-                "%s: Unsupported buffer management policy: %s, disable shared memory.\n",
-                __func__, app_cfg.bm_policy
+                    INFO, SWITCH,
+                    "%s: shared memory enabled, bm_policy: RL, buffer_size: %uB=%uKiB\n",
+                    __func__,
+                    app.buff_size_bytes,
+                    app.buff_size_bytes / 1024
+            );
+            /* 给一个能跑起来的初始值 */
+            uint64_t threshold = app_cfg.RL_init_threshold;
+            RTE_LOG(
+                    INFO, SWITCH,
+                    "%s: threshold of every queue is %ld\n",
+                    __func__,
+                    threshold
+            );
+            for (uint32_t i = 0; i < app.n_ports; ++i) {
+                for (uint32_t j = 0; j < app.n_queues; ++j) {
+                    app.port_threshold[i][j] = threshold;
+                }
+            }
+        } else {
+            RTE_LOG(
+                    ERR, SWITCH,
+                    "%s: Unsupported buffer management policy: %s, disable shared memory.\n",
+                    __func__, app_cfg.bm_policy
             );
             app.shared_memory = 0;
         }
@@ -211,18 +236,18 @@ app_read_config_file(const char *fname) {
     if (app_cfg.log_qlen) {
         if (app_cfg.qlen_fname == NULL) {
             RTE_LOG(
-                ERR, SWITCH,
-                "%s: Enable queue length log, but log file name is not specified.\n",
-                __func__
+                    ERR, SWITCH,
+                    "%s: Enable queue length log, but log file name is not specified.\n",
+                    __func__
             );
         } else {
             app.qlen_file = fopen(app_cfg.qlen_fname, "w");
             if (app.qlen_file == NULL) {
                 perror("Open file error:");
                 RTE_LOG(
-                    ERR, SWITCH,
-                    "%s: Cannot open queue length log file '%s'\n",
-                    __func__, app_cfg.qlen_fname
+                        ERR, SWITCH,
+                        "%s: Cannot open queue length log file '%s'\n",
+                        __func__, app_cfg.qlen_fname
                 );
             } else {
                 app.log_qlen = 1;
@@ -231,10 +256,10 @@ app_read_config_file(const char *fname) {
                 } else {
                     app.log_qlen_port = app.n_ports;
                     RTE_LOG(
-                        WARNING, SWITCH,
-                        "%s: The log queue length port (%ld) is invalid. \
+                            WARNING, SWITCH,
+                            "%s: The log queue length port (%ld) is invalid. \
                         Queue length logging is enabled for all ports.",
-                        __func__, app_cfg.log_qlen_port
+                            __func__, app_cfg.log_qlen_port
                     );
                 }
             }
@@ -243,15 +268,15 @@ app_read_config_file(const char *fname) {
     if (app.log_qlen) {
         if (app.log_qlen_port >= 0 && app.log_qlen_port < app.n_ports) {
             RTE_LOG(
-                INFO, SWITCH,
-                "%s: Queue length logging is enabled for port %u. Logging is dumped into file %s\n",
-                __func__, app.log_qlen_port, app_cfg.qlen_fname
+                    INFO, SWITCH,
+                    "%s: Queue length logging is enabled for port %u. Logging is dumped into file %s\n",
+                    __func__, app.log_qlen_port, app_cfg.qlen_fname
             );
         } else {
             RTE_LOG(
-                WARNING, SWITCH,
-                "%s: Queue length logging is enabled for all ports. Logging is dumped into file %s\n",
-                __func__, app_cfg.qlen_fname
+                    WARNING, SWITCH,
+                    "%s: Queue length logging is enabled for all ports. Logging is dumped into file %s\n",
+                    __func__, app_cfg.qlen_fname
             );
         }
     }
@@ -263,12 +288,12 @@ app_read_config_file(const char *fname) {
         app.ecn_thresh_kb = 0;
     }
     app.tx_rate_mbps = (app_cfg.tx_rate_mbps >= 0 ? app_cfg.tx_rate_mbps : 0);
-    app.bucket_size = (app_cfg.bucket_size > ETHER_MIN_LEN ? app_cfg.bucket_size: app.bucket_size);
+    app.bucket_size = (app_cfg.bucket_size > ETHER_MIN_LEN ? app_cfg.bucket_size : app.bucket_size);
     if (app_cfg.bucket_size < ETHER_MAX_LEN) {
         RTE_LOG(
-            WARNING, SWITCH,
-            "%s: TBF bucket size (given %ldB) is smaller than MTU(%uB)\n",
-            __func__, app_cfg.bucket_size, ETHER_MAX_LEN
+                WARNING, SWITCH,
+                "%s: TBF bucket size (given %ldB) is smaller than MTU(%uB)\n",
+                __func__, app_cfg.bucket_size, ETHER_MAX_LEN
         );
     }
 
@@ -286,33 +311,33 @@ static void app_finish_config(void) {
     if (!app.shared_memory) {
         app.buff_size_per_port_bytes = app.buff_size_bytes / app.n_ports;
         RTE_LOG(
-            INFO, SWITCH,
-            "%s: shared memory disabled, each port has %uB/%uKiB buffer.\n",
-            __func__,
-            app.buff_size_per_port_bytes,
-            app.buff_size_per_port_bytes / 1024
+                INFO, SWITCH,
+                "%s: shared memory disabled, each port has %uB/%uKiB buffer.\n",
+                __func__,
+                app.buff_size_per_port_bytes,
+                app.buff_size_per_port_bytes / 1024
         );
     }
     if (app.ecn_enable) {
         RTE_LOG(
-            INFO, SWITCH,
-            "%s: ECN marking is enabled, ECN threshold=%uKiB.\n",
-            __func__, app.ecn_thresh_kb
+                INFO, SWITCH,
+                "%s: ECN marking is enabled, ECN threshold=%uKiB.\n",
+                __func__, app.ecn_thresh_kb
         );
     }
     if (app.tx_rate_mbps > max_tx_rate_mbps) {
         RTE_LOG(
-            ERR, SWITCH,
-            "%s: tx rate must be smaller than %luMbps to prevent integer overflow\n",
-            __func__,
-            max_tx_rate_mbps
+                ERR, SWITCH,
+                "%s: tx rate must be smaller than %luMbps to prevent integer overflow\n",
+                __func__,
+                max_tx_rate_mbps
         );
         app.tx_rate_mbps = 0;
     }
     RTE_LOG(
-        INFO, SWITCH,
-        "%s: tx_rate: %luMbps, tbf bucket size=%uB\n",
-        __func__, app.tx_rate_mbps, app.bucket_size
+            INFO, SWITCH,
+            "%s: tx_rate: %luMbps, tbf bucket size=%uB\n",
+            __func__, app.tx_rate_mbps, app.bucket_size
     );
 }
 
@@ -323,24 +348,24 @@ app_parse_args(int argc, char **argv) {
     int option_index;
     char *prgname = argv[0];
     static struct option lgopts[] = {
-        {"none", 0, 0, 0},
+            {"none", 0, 0, 0},
     };
     uint32_t lcores[RTE_MAX_LCORE], n_lcores, lcore_id, i;
 
     /* Non-EAL args */
     argvopt = argv;
 
-    while ((opt = getopt_long(argc, argvopt, "p:",lgopts, &option_index)) != EOF) {
+    while ((opt = getopt_long(argc, argvopt, "p:", lgopts, &option_index)) != EOF) {
 //        printf("opt is %c, optarg is %s\n", opt, optarg);
         switch (opt) {
-        case 'p':
-            if (app_parse_port_mask(optarg) < 0) {
-                return -1;
-            }
-            break;
+            case 'p':
+                if (app_parse_port_mask(optarg) < 0) {
+                    return -1;
+                }
+                break;
 
-        default:
-            return -1;
+            default:
+                return -1;
         }
     }
 
@@ -364,8 +389,11 @@ app_parse_args(int argc, char **argv) {
     // 前俩核一个rx,一个worker,剩下的为每个端口的tx分配一个核,最后一个核做log
 
     // rx 改为多核
-    for(i = 0; i < app.n_ports; i++){
+    for (i = 0; i < app.n_ports; i++) {
         app.core_rx[i] = lcores[i];
+//        app.core_rx[i] = lcores[i * 3];
+//        app.core_worker[i] = lcores[i * 3 + 1];
+//        app.core_tx[i] = lcores[i * 3 + 2];
     }
 
 //    app.core_worker = lcores[1];
@@ -375,6 +403,7 @@ app_parse_args(int argc, char **argv) {
     for (i = 0; i < app.n_ports; i++) {
         app.core_tx[i] = lcores[i + app.n_ports + app.n_ports];
     }
+    app.core_rl = lcores[n_lcores - 2];
     app.core_log = lcores[n_lcores - 1];
     app.n_lcores = n_lcores;
 

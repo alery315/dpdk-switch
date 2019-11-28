@@ -159,6 +159,7 @@ void app_main_tx_port(uint32_t port_id) {
                 app.counter2_e[port_id] = 0;
                 app.counter2_d[port_id] = 0;
                 app.isUnControl[port_id] = 0;
+                app.counter1[port_id] = 0;
                 printf("*********************%u is control C1 out****************\n", port_id);
             }
 

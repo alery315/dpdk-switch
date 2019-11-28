@@ -366,6 +366,33 @@ transmit.c.s:
 	$(MAKE) -f CMakeFiles/dpdk-switch.dir/build.make CMakeFiles/dpdk-switch.dir/transmit.c.s
 .PHONY : transmit.c.s
 
+use_RL.o: use_RL.c.o
+
+.PHONY : use_RL.o
+
+# target to build an object file
+use_RL.c.o:
+	$(MAKE) -f CMakeFiles/dpdk-switch.dir/build.make CMakeFiles/dpdk-switch.dir/use_RL.c.o
+.PHONY : use_RL.c.o
+
+use_RL.i: use_RL.c.i
+
+.PHONY : use_RL.i
+
+# target to preprocess a source file
+use_RL.c.i:
+	$(MAKE) -f CMakeFiles/dpdk-switch.dir/build.make CMakeFiles/dpdk-switch.dir/use_RL.c.i
+.PHONY : use_RL.c.i
+
+use_RL.s: use_RL.c.s
+
+.PHONY : use_RL.s
+
+# target to generate assembly for a file
+use_RL.c.s:
+	$(MAKE) -f CMakeFiles/dpdk-switch.dir/build.make CMakeFiles/dpdk-switch.dir/use_RL.c.s
+.PHONY : use_RL.c.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -402,6 +429,9 @@ help:
 	@echo "... transmit.o"
 	@echo "... transmit.i"
 	@echo "... transmit.s"
+	@echo "... use_RL.o"
+	@echo "... use_RL.i"
+	@echo "... use_RL.s"
 .PHONY : help
 
 

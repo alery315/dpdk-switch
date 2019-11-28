@@ -107,12 +107,11 @@ int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt) 
             threshold = app.get_threshold(dst_queue);
             qlen_enque = app.qlen_bytes_in_queue[dst_port][dst_queue] - app.qlen_bytes_out_queue[dst_port][dst_queue];
             qlen_enque += pkt->pkt_len;
+        } else if (app.rl_policy) {
+            threshold = app.port_threshold[dst_port][dst_queue];
         } else{
             threshold = app.get_threshold(dst_port);
         }
-
-//        threshold = 8096 * 1024;
-
 
         // 大于阈值了 或者 大于总buf长度了
         if (qlen_enque > threshold) {
@@ -246,9 +245,14 @@ int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt) 
         */
     } else {
         rte_pktmbuf_free(pkt);
+        // EDT policy
+        if (app.edt_policy) {
+            app.counter2_e[dst_port] = 0;
+            app.counter2_d[dst_port] = 0;
+        }
 
-        app.counter2_e[dst_port] = 0;
-        app.counter2_d[dst_port] = 0;
+        app.qlen_drop[dst_port]++;
+
     }
     switch (ret) {
     case 0:

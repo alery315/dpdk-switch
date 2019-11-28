@@ -97,12 +97,13 @@
 #define MEAN_PKT_SIZE 800 // used for calculate ring length and # of mbuf pools
 #define RATE_SCALE 20 // the scale of tx rate
 
- #define MIN(a,b) \
+#define MIN(a, b) \
    ({ __typeof__ (a) _a = (a); \
        __typeof__ (b) _b = (b); \
      _a < _b ? _a : _b; })
 
-typedef uint32_t (* get_threshold_callback_fn)(uint32_t port_id);
+typedef uint32_t (*get_threshold_callback_fn)(uint32_t port_id);
+
 struct app_mbuf_array {
     // 结构体mbuf的指针数组:存放许多指向mbuf的指针
     struct rte_mbuf *array[APP_MBUF_ARRAY_SIZE];
@@ -115,7 +116,7 @@ struct app_mbuf_array {
 #endif
 
 #ifndef APP_MAX_QUEUES
-#define APP_MAX_QUEUES 4
+#define APP_MAX_QUEUES 8
 #endif
 
 struct app_fwd_table_item {
@@ -140,6 +141,7 @@ struct app_configs {
     long C2;
     long max_burst_time;
     long T1;
+    long RL_init_threshold;
     cfg_t *cfg;
 };
 
@@ -156,6 +158,7 @@ struct app_params {
     uint32_t core_worker[RTE_MAX_LCORE];
     uint32_t core_tx[RTE_MAX_LCORE];
     uint32_t core_log;
+    uint32_t core_rl;
 
     /* Ports*/
     uint32_t ports[APP_MAX_PORTS];
@@ -186,31 +189,32 @@ struct app_params {
     uint32_t buff_size_bytes;
     uint32_t buff_size_per_port_bytes;
     uint32_t
-        shared_memory:1, /* whether enable shared memory */
-        edt_policy:1,
-        awa_policy:1,
-        /* whether log queue length and the file to put log in */
-        log_qlen:1,
-        /* the port to log queue length */
-        log_qlen_port:5,
-        dt_shift_alpha:14, /* parameter alpha of DT = 1 << dt_shift_alpha */
-        ecn_enable:1,
-        unused:10;
+            shared_memory:1, /* whether enable shared memory */
+            edt_policy:1,
+            awa_policy:1,
+            rl_policy:1,
+    /* whether log queue length and the file to put log in */
+            log_qlen:1,
+    /* the port to log queue length */
+            log_qlen_port:5,
+            dt_shift_alpha:14, /* parameter alpha of DT = 1 << dt_shift_alpha */
+            ecn_enable:1,
+            unused:10;
     uint64_t qlen_start_cycle;
 
-    FILE* qlen_file;
+    FILE *qlen_file;
     /*rte_rwlock_t lock_bocu;*/
     rte_spinlock_t lock_buff;
 
     /* 分配策略 */
     get_threshold_callback_fn get_threshold;
 
-
     /* buffer occupancy*/
     uint32_t buff_bytes_in;
     uint32_t buff_bytes_out;
     uint32_t buff_pkts_in;
     uint32_t buff_pkts_out;
+
     /* queue length*/
     /*rte_rwlock_t lock_qlen[APP_MAX_PORTS];*/
     uint64_t qlen_bytes_in[APP_MAX_PORTS];
@@ -222,6 +226,10 @@ struct app_params {
     uint64_t qlen_bytes_in_queue[APP_MAX_PORTS][APP_MAX_QUEUES];
     uint64_t qlen_bytes_out_queue[APP_MAX_PORTS][APP_MAX_QUEUES];
     uint32_t queue_priority[APP_MAX_PORTS];
+    uint32_t qlen_drop[APP_MAX_PORTS];
+
+    uint32_t port_threshold[APP_MAX_PORTS][APP_MAX_QUEUES];
+
     /* Rings */
     struct rte_ring *rings_rx[APP_MAX_PORTS][APP_MAX_QUEUES];
     struct rte_ring *rings_tx[APP_MAX_PORTS][APP_MAX_QUEUES];
@@ -252,7 +260,7 @@ struct app_params {
     /* things about forwarding table */
     struct app_fwd_table_item fwd_table[APP_MAX_PORTS][FORWARD_ENTRY];
     char ft_name[MAX_NAME_LEN]; /* forward table name */
-    struct rte_hash* l2_hash[APP_MAX_PORTS];
+    struct rte_hash *l2_hash[APP_MAX_PORTS];
     uint64_t fwd_item_valid_time; /* valide time of forward item, in CPU cycles */
 
     uint32_t ecn_thresh_kb;
@@ -266,18 +274,28 @@ struct app_params {
 extern struct app_params app;
 
 int app_parse_args(int argc, char **argv);
+
 void app_print_usage(void);
+
 void app_init(void);
+
 int app_lcore_main_loop(void *arg);
 
 void app_main_loop_rx(uint32_t);
+
 void app_main_loop_forwarding(uint32_t);
+
 void app_main_loop_tx_each_port(uint32_t);
+
 void app_main_loop_tx(void);
+
 void app_main_tx_port(uint32_t);
 
-// doing logging
+/* doing log */
 void app_main_loop_logging(void);
+
+/* use RL to calc threshold */
+void app_main_loop_RL(void);
 
 /*
  * Initialize forwarding table.
@@ -289,15 +307,17 @@ int app_init_forwarding_table(uint32_t port_id);
 /*
  * Return 0 when OK, -1 when there is error.
  */
-int app_l2_learning(const struct ether_addr* srcaddr, uint8_t port);
+int app_l2_learning(const struct ether_addr *srcaddr, uint8_t port);
 
 /*
  * Return port id to forward (broadcast if negative)
  */
-int app_l2_lookup(const struct ether_addr* addr, uint8_t port_id);
+int app_l2_lookup(const struct ether_addr *addr, uint8_t port_id);
 
 uint64_t get_qlen_bytes(uint32_t port_id);
+
 uint64_t get_buff_occu_bytes(void);
+
 /*
  * Wrapper for enqueue
  * Returns:
@@ -311,10 +331,13 @@ int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt);
  * if queue length for a port is larger than threshold, then packets are dropped.
 */
 uint32_t qlen_threshold_equal_division(uint32_t port_id);
+
 /* dynamic threshold */
 uint32_t qlen_threshold_dt(uint32_t port_id);
+
 /* enhancing dynamic threshold */
 uint32_t qlen_threshold_edt(uint32_t port_id);
+
 uint32_t qlen_threshold_awa(uint32_t port_id);
 
 

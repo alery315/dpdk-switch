@@ -12,15 +12,15 @@ volatile bool force_quit;
 static void
 signal_handler(int signum) {
     switch (signum) {
-    case SIGTERM:
-    case SIGINT:
-        RTE_LOG(
-            INFO, SWITCH,
-            "%s: Receive %d signal, prepare to exit...\n",
-            __func__, signum
-        );
-        force_quit = true;
-        break;
+        case SIGTERM:
+        case SIGINT:
+            RTE_LOG(
+                    INFO, SWITCH,
+                    "%s: Receive %d signal, prepare to exit...\n",
+                    __func__, signum
+            );
+            force_quit = true;
+            break;
     }
 }
 
@@ -34,9 +34,9 @@ app_quit(void) {
     for (i = 0; i < app.n_ports; i++) {
         uint8_t port = (uint8_t) app.ports[i];
         RTE_LOG(
-            INFO, SWITCH,
-            "%s: Closing NIC port %u ...\n",
-            __func__, port
+                INFO, SWITCH,
+                "%s: Closing NIC port %u ...\n",
+                __func__, port
         );
         rte_eth_dev_stop(port);
         rte_eth_dev_close(port);
@@ -143,6 +143,16 @@ app_lcore_main_loop(__attribute__((unused)) void *arg) {
     }
 
 
+    if (lcore == app.core_rl) {
+        RTE_LOG(
+                INFO, SWITCH,
+                "%s: current lcore is %u, doing rl calc ...\n",
+                __func__, lcore
+        );
+        app_main_loop_RL();
+        return 0;
+    }
+
     if (lcore == app.core_log) {
         RTE_LOG(
                 INFO, SWITCH,
@@ -154,7 +164,7 @@ app_lcore_main_loop(__attribute__((unused)) void *arg) {
     }
 
     // 如果给定的核够每个端口分配一个(被rx与forward占用两个)
-    if (app.n_lcores >= 2+app.n_ports) {
+    if (app.n_lcores >= 2 + app.n_ports) {
 
         for (i = 0; i < app.n_ports; i++) {
             if (lcore == app.core_tx[i]) {

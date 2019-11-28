@@ -10,13 +10,13 @@ int64_t getCurrentTime()      //直接调用这个函数就行了，返回值最
 {
     struct timeval tv;
     gettimeofday(&tv, NULL);    //该函数在sys/time.h头文件中
-    return tv.tv_sec * 1000000 + tv.tv_usec;
+    return (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
 }
 
 void thread(int thread) {
     int i;
     for (i = 0; i < 3; i++)
-        printf("This is a pthread.    time is %ld thread is %d\n", getCurrentTime(), thread);
+        printf("This is a pthread. time is %ld thread is %d\n", getCurrentTime(), thread);
 }
 
 int main() {
@@ -96,6 +96,13 @@ int main() {
     for (i = 0; i < 4; i++) {
         pthread_join(id[i], NULL);
     }
+
+    printf("time is %ld\n", getCurrentTime());
+    for (int j = 0; j < 99999999; ++j) {
+        getCurrentTime();
+    }
+    printf("time is %ld\n", getCurrentTime());
+
 
 
     return 0;

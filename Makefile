@@ -42,6 +42,7 @@ CFLAGS += -O3
 CFLAGS += $(WERROR_FLAGS)
 
 LDLIBS += -lconfuse
+LDLIBS += -ltensorflow
 
 #
 # all source are stored in SRCS-y
@@ -54,6 +55,7 @@ SRCS-y += forwarding.c
 SRCS-y += transmit.c
 SRCS-y += output_queue.c
 SRCS-y += log.c
+SRCS-y += use_RL.c
 
 include $(RTE_SDK)/mk/rte.extapp.mk
 

@@ -8,6 +8,7 @@ file(REMOVE_RECURSE
   "CMakeFiles/dpdk-switch.dir/output_queue.c.o"
   "CMakeFiles/dpdk-switch.dir/test.c.o"
   "CMakeFiles/dpdk-switch.dir/log.c.o"
+  "CMakeFiles/dpdk-switch.dir/use_RL.c.o"
   "dpdk-switch.pdb"
   "dpdk-switch"
 )
