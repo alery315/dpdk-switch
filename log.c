@@ -26,6 +26,21 @@ log_qlen_info(uint32_t port_id) {
 
 static void
 log_threshold(uint32_t port_id) {
+    if (app.awa_policy) {
+        uint32_t threshold;
+        for (uint32_t i = 0; i < app.n_queues; ++i) {
+            threshold = app.get_threshold(i);
+            RTE_LOG(
+                    INFO, SWITCH,
+                    "%s: ---------------------------------------------------------the threshold of queue %d is > %u, buffer occu is %lu\n",
+                    __func__,
+                    port_id,
+                    threshold / 1024,
+                    get_buff_occu_bytes() / 1024
+            );
+        }
+        return;
+    }
     uint32_t threshold = app.get_threshold(port_id);
     RTE_LOG(
             INFO, SWITCH,
@@ -35,11 +50,17 @@ log_threshold(uint32_t port_id) {
             threshold / 1024,
             get_buff_occu_bytes() / 1024
     );
-    printf("port is %u, counter2_e is %ld, counter2_d is %ld, diff is %ld\n",
-            port_id,
-            app.counter2_e[port_id],
-            app.counter2_d[port_id],
-            app.counter2_e[port_id] - app.counter2_d[port_id]);
+
+//    printf("port is %u, counter2_e is %ld, counter2_d is %ld, diff is %ld\n",
+//            port_id,
+//            app.counter2_e[port_id],
+//            app.counter2_d[port_id],
+//            app.counter2_e[port_id] - app.counter2_d[port_id]);
+
+//    for (uint32_t i = 0; i < app.n_queues; ++i) {
+//        printf("queue is %d, threshold is %ld\n", i, app.port_threshold[0][i]);
+//    }
+//    printf("********************************************************\n");
 }
 
 static void
@@ -87,7 +108,13 @@ log_transmit_args(uint32_t port_id) {
 
 void
 app_main_loop_logging(void) {
-    uint32_t i;
+    uint32_t i = 0;
+
+//    while (!force_quit) {
+//        log_threshold(0);
+//        printf("i is %u\n", i++);
+//        sleep(2);
+//    }
 
     for (i = 0; !force_quit; i = ((i + 1) & (app.n_ports - 1))) {
 
@@ -97,7 +124,9 @@ app_main_loop_logging(void) {
 
 //        log_transmit_args(i);
 
-        sleep(1);
+
+
+        sleep(3);
     }
 }
 

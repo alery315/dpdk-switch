@@ -250,8 +250,9 @@ int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt) 
             app.counter2_e[dst_port] = 0;
             app.counter2_d[dst_port] = 0;
         }
-
+//        printf("drop one packet");
         app.qlen_drop[dst_port]++;
+        app.qlen_drop_queue[dst_port][dst_queue]++;
 
     }
     switch (ret) {

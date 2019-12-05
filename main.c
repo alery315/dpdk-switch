@@ -143,7 +143,7 @@ app_lcore_main_loop(__attribute__((unused)) void *arg) {
     }
 
 
-    if (lcore == app.core_rl) {
+    if (lcore == app.core_rl && app.rl_policy) {
         RTE_LOG(
                 INFO, SWITCH,
                 "%s: current lcore is %u, doing rl calc ...\n",

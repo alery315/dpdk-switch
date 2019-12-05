@@ -82,6 +82,11 @@
 #include <rte_hash.h>
 #include <rte_hash_crc.h>
 
+#include <stdlib.h>
+#include <stdio.h>
+#include <tensorflow/c/c_api.h>
+#include <unistd.h>
+
 #ifndef APP_MBUF_ARRAY_SIZE
 #define APP_MBUF_ARRAY_SIZE 256
 #endif
@@ -219,16 +224,17 @@ struct app_params {
     /*rte_rwlock_t lock_qlen[APP_MAX_PORTS];*/
     uint64_t qlen_bytes_in[APP_MAX_PORTS];
     uint64_t qlen_bytes_out[APP_MAX_PORTS];
-    uint64_t qlen_pkts_in[APP_MAX_PORTS];
-    uint64_t qlen_pkts_out[APP_MAX_PORTS];
+    int64_t qlen_pkts_in[APP_MAX_PORTS];
+    int64_t qlen_pkts_out[APP_MAX_PORTS];
     uint64_t qlen_pkts_in_queue[APP_MAX_PORTS][APP_MAX_QUEUES];
     uint64_t qlen_pkts_out_queue[APP_MAX_PORTS][APP_MAX_QUEUES];
     uint64_t qlen_bytes_in_queue[APP_MAX_PORTS][APP_MAX_QUEUES];
     uint64_t qlen_bytes_out_queue[APP_MAX_PORTS][APP_MAX_QUEUES];
     uint32_t queue_priority[APP_MAX_PORTS];
-    uint32_t qlen_drop[APP_MAX_PORTS];
+    int64_t qlen_drop[APP_MAX_PORTS];
+    int64_t qlen_drop_queue[APP_MAX_PORTS][APP_MAX_QUEUES];
 
-    uint32_t port_threshold[APP_MAX_PORTS][APP_MAX_QUEUES];
+    int64_t port_threshold[APP_MAX_PORTS][APP_MAX_QUEUES];
 
     /* Rings */
     struct rte_ring *rings_rx[APP_MAX_PORTS][APP_MAX_QUEUES];
@@ -340,6 +346,7 @@ uint32_t qlen_threshold_edt(uint32_t port_id);
 
 uint32_t qlen_threshold_awa(uint32_t port_id);
 
+int64_t getCurrentTime();
 
 #define APP_FLUSH 0
 #ifndef APP_FLUSH

@@ -180,6 +180,7 @@ app_init_rings(void) {
                 rte_panic("Cannot create TX ring %u queue %u\n", i, j);
             app.qlen_pkts_in_queue[i][j] = app.qlen_pkts_out_queue[i][j] = 0;
             app.qlen_bytes_in_queue[i][j] = app.qlen_bytes_out_queue[i][j] = 0;
+            app.qlen_drop_queue[i][j] = 0;
         }
         app.qlen_bytes_in[i] = app.qlen_pkts_in[i] = 0;
         app.qlen_bytes_out[i] = app.qlen_pkts_out[i] = 0;

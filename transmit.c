@@ -132,6 +132,7 @@ void app_main_tx_port(uint32_t port_id) {
 
         // 这里不是return了,而是进入下一个队列
         if (ret == -ENOENT) { /* no packets in tx ring */
+            if(app.queue_priority[port_id] > 0) app.queue_priority[port_id]--;
             continue ;
         }
 
