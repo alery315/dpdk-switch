@@ -51,16 +51,19 @@ log_threshold(uint32_t port_id) {
             get_buff_occu_bytes() / 1024
     );
 
-//    printf("port is %u, counter2_e is %ld, counter2_d is %ld, diff is %ld\n",
-//            port_id,
-//            app.counter2_e[port_id],
-//            app.counter2_d[port_id],
-//            app.counter2_e[port_id] - app.counter2_d[port_id]);
+    if (app.rl_policy) {
+//        printf("port is %u, counter2_e is %ld, counter2_d is %ld, diff is %ld\n",
+//               port_id,
+//               app.counter2_e[port_id],
+//               app.counter2_d[port_id],
+//               app.counter2_e[port_id] - app.counter2_d[port_id]);
 
-//    for (uint32_t i = 0; i < app.n_queues; ++i) {
-//        printf("queue is %d, threshold is %ld\n", i, app.port_threshold[0][i]);
-//    }
-//    printf("********************************************************\n");
+        for (uint32_t i = 0; i < app.n_queues; ++i) {
+            printf("queue is %d, threshold is %ld\n", i, app.port_threshold[0][i]);
+        }
+        printf("********************************************************\n");
+    }
+
 }
 
 static void

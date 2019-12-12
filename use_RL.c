@@ -32,7 +32,7 @@ int64_t in_dims[] = {1, 8, 6, 8};
 int input_dims = 8 * 6 * 8;
 int one_input_dim = 6 * 8;
 int out_put_dim = 8;
-int64_t Trigger_number = 1000;
+int64_t Trigger_number = 300;
 float last_threshold[8];
 float buffer_size;
 
@@ -130,11 +130,12 @@ app_main_loop_RL(void) {
 
             for (int j = 0; j < input_dims; ++j) {
                 *(values_p + j) = values_queue[t_pos];
+
 //                *(values_p + j) = (float) j;
-//                printf("%8.4f ", *(values_p + j));
-//                if (j % 6 == 5) {
-//                    printf(" j: %d\n", j);
-//                }
+                printf("%8.4f ", *(values_p + j));
+                if (j % 6 == 5) {
+                    printf(" j: %d\n", j);
+                }
 
                 t_pos++;
                 if (t_pos >= input_dims) t_pos -= input_dims;
@@ -165,58 +166,6 @@ app_main_loop_RL(void) {
             int64_t time_interval = getCurrentTime() - pre_time;
         }
 
-//        if (diff <= -1) {
-////            printf("trigger\n");
-////            fflush(stdin);
-//            int64_t time_interval = getCurrentTime() - pre_time;
-////            int64_t trigger_number = Trigger_number;
-////            for (uint32_t i = 0; i < queues; ++i) {
-////                int64_t queue_length = app.qlen_pkts_in_queue[dst_port][i] - app.qlen_pkts_out_queue[dst_port][i];
-////                int64_t enqueue = app.qlen_pkts_in_queue[dst_port][i] - en_queue[i];
-////                en_queue[i] = app.qlen_pkts_in_queue[dst_port][i];
-////                int64_t dropped = app.qlen_drop_queue[dst_port][i] - dropped_queue[i];
-////                dropped_queue[i] = app.qlen_drop_queue[dst_port][i];
-////                float last_t = last_threshold[i];
-////                printf("queue is %d droped: %ld\n", i, dropped);
-////                values_queue[position++] = (float)queue_length / buffer_size;
-////                values_queue[position++] = (float)enqueue / buffer_size;
-////                values_queue[position++] = (float)dropped / buffer_size;
-////                values_queue[position++] = (float)last_t;
-////                values_queue[position++] = (float)time_interval;
-////                values_queue[position++] = (float)trigger_number / buffer_size;
-////            }
-////            if (position > input_dims) position -= input_dims;
-////            int t_pos = position;
-//
-////            float *values_p = malloc(sizeof(float) * input_dims);
-////
-////            for (int j = 0; j < input_dims; ++j) {
-//////                *(values_p + j) = values_queue[t_pos];
-//////                printf("%8.4f ", *(values_p + j));
-//////                t_pos++;
-//////                if (j % 6 == 5) {
-//////                    printf(" j: %d\n", j);
-//////                }
-//////                if (t_pos >= input_dims) t_pos -= input_dims;
-////                *(values_p + j) = (float)j;
-////            }
-////            printf("\n");
-//
-////            pre_enqueue = app.qlen_pkts_in[dst_port];
-////            pre_drop = app.qlen_drop[dst_port];
-////            pre_time = getCurrentTime();
-//            RTE_LOG(
-//                    INFO, SWITCH,
-//                    "%s: time interval is %lu, pre_enqueue is %lu, pre_drop is %lu\n",
-//                    __func__, time_interval, pre_enqueue, pre_drop
-//            );
-////            run_session(values_p, (int)sizeof(float) * input_dims);
-////            printf("quit \n");
-////            fflush(stdin);
-////            sleep(1);
-//        }
-//        printf("asdjfasfd \n");
-//        fflush(stdin);
     }
 
 
@@ -325,14 +274,14 @@ run_session(float *values_p, int data_length) {
     // get result after run session
     float *out_values = TF_TensorData(output_values);
 
-//    printf("output value : \n");
+    printf("output value : \n");
     for (int i = 0; i < out_put_dim; ++i) {
-//        printf("%f ", *(out_values + i));
+        printf("%f ", *(out_values + i));
         last_threshold[i] = ((*(out_values + i)) + 1) / 2;
         app.port_threshold[0][i] = (int64_t) (((*(out_values + i)) + 1) / 2.0 * buffer_size);
-//        printf("queue is %d, threshold is %ld\n", i, app.port_threshold[0][i]);
+        printf("queue is %d, threshold is %ld\n", i, app.port_threshold[0][i]);
     }
-//    printf("\n");
+    printf("\n");
 
     // 这里不能free,会导致后面TF_NewTensor时候空指针
 //     free(values_p);

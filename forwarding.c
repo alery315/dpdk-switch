@@ -185,8 +185,9 @@ app_main_loop_forwarding(uint32_t port_id) {
 
     app.scale_max_burst_time = rte_get_tsc_hz() * app.max_burst_time / 10000;
     app.scale_T1 = rte_get_tsc_hz() * app.T1 / 10000;
-    printf("lcore is %u, max_burst_time: %ld\n", rte_lcore_id(), app.scale_max_burst_time);
-    printf("lcore is %u, T1_time: %ld\n", rte_lcore_id(), app.scale_T1);
+
+    printf("forwarding: lcore is %u, max_burst_time: %ld\n", rte_lcore_id(), app.scale_max_burst_time);
+    printf("forwarding: lcore is %u, T1_time: %ld\n", rte_lcore_id(), app.scale_T1);
 
 //    app.start_time = rte_get_tsc_cycles();
 
@@ -216,6 +217,7 @@ app_main_loop_forwarding(uint32_t port_id) {
     // 如果force_quit不为真,那么i一直自加并对(端口数量-1)取余 比如四个口,i为0 1 2 3 0 1 2 3 ...
 //    for (i = 0; !force_quit; i = ((i + 1) & (app.n_ports - 1))) {
     int ret;
+    int count = 0;
 
     /*ret = rte_ring_sc_dequeue_bulk(
         app.rings_rx[i],
@@ -252,6 +254,31 @@ app_main_loop_forwarding(uint32_t port_id) {
         // l2 forward
         // 根据dst_addr查找目标端口
         dst_port = app_l2_lookup(&(eth->d_addr), port_id);
+
+//        RTE_LOG(
+//                INFO, HASH,
+//                "%s: ------------------------------source mac address is :"
+//                " %02" PRIx8 " %02" PRIx8 " %02" PRIx8
+//                        " %02" PRIx8 " %02" PRIx8 " %02" PRIx8"   count is: %d\n",
+//                __func__,
+//                eth->s_addr.addr_bytes[0], eth->s_addr.addr_bytes[1],
+//                eth->s_addr.addr_bytes[2], eth->s_addr.addr_bytes[3],
+//                eth->s_addr.addr_bytes[4], eth->s_addr.addr_bytes[5],
+//                count
+//        );
+//
+//        RTE_LOG(
+//                INFO, HASH,
+//                "%s: -------------------------destination mac address is :"
+//                " %02" PRIx8 " %02" PRIx8 " %02" PRIx8
+//                        " %02" PRIx8 " %02" PRIx8 " %02" PRIx8"   count is: %d\n",
+//                __func__,
+//                eth->d_addr.addr_bytes[0], eth->d_addr.addr_bytes[1],
+//                eth->d_addr.addr_bytes[2], eth->d_addr.addr_bytes[3],
+//                eth->d_addr.addr_bytes[4], eth->d_addr.addr_bytes[5],
+//                count++
+//        );
+
         if (unlikely(dst_port < 0)) {
             /* broadcast */
             RTE_LOG(DEBUG, SWITCH, "%s: src_prot %u queue %u broadcast packets\n", __func__, port_id, priority);

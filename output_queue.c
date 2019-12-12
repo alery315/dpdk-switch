@@ -96,7 +96,7 @@ int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt) 
     uint32_t buff_occu_bytes = 0;
     // 标记新包 << 10 把本来kb单位的转化为byte单位
     // 开启ecn并且qlen大于threshold ???
-    //mark_pkt = (app.ecn_enable && qlen_bytes >= (app.ecn_thresh_kb<<10));
+//    mark_pkt = (app.ecn_enable && qlen_bytes >= (app.ecn_thresh_kb<<10));
     /*Check whether buffer overflows after enqueue*/
     if (app.shared_memory) {
         // 所有的 in - out, buf占用
