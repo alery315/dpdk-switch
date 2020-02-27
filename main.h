@@ -185,6 +185,7 @@ struct app_params {
     uint64_t scale_T1;
     uint8_t flag[APP_MAX_PORTS];
     uint8_t isUnControl[APP_MAX_PORTS];
+    uint32_t unControlNums;
     int64_t C1, C2;
 
     /* AWA parameters */
@@ -340,6 +341,9 @@ uint32_t qlen_threshold_equal_division(uint32_t port_id);
 
 /* dynamic threshold */
 uint32_t qlen_threshold_dt(uint32_t port_id);
+
+/* complete sharing */
+uint32_t qlen_threshold_cs(uint32_t port_id);
 
 /* enhancing dynamic threshold */
 uint32_t qlen_threshold_edt(uint32_t port_id);

@@ -48,8 +48,8 @@ struct app_params app = {
     .tx_rate_mbps = 0,
 	.bucket_size = 3200,
 
-	.C1 = 120,
-	.C2 = 320,
+	.C1 = 10,
+	.C2 = 20,
 	.max_burst_time = 100,
 	.T1 = 21,
 };
@@ -143,12 +143,12 @@ app_init_rings(void) {
 
     // init rx_ring
     app.ring_rx_size = (topower2(app.buff_size_bytes / MEAN_PKT_SIZE) << 2);
+    printf("prot is %u, queue is %u, ring_rx_size is %u\n", 0, 0, app.ring_rx_size);
     for (i = 0; i < app.n_ports; i++) {
         char name[32];
 
         for (j = 0; j < app.n_queues; j++) {
             snprintf(name, sizeof(name), "app_ring_rx_%u_%u", i, j);
-            printf("prot is %u, queue is %u, ring_rx_size is %u\n", i, j, app.ring_rx_size);
             app.rings_rx[i][j] = rte_ring_create(
                     name,
                     app.ring_rx_size,
@@ -169,7 +169,7 @@ app_init_rings(void) {
 
         for (j = 0; j < app.n_queues; j++) {
             snprintf(name, sizeof(name), "app_ring_tx_%u_%u", i, j);
-            printf("prot is %u, queue is %u, ring_tx_size is %u\n", i, j, app.ring_tx_size);
+//            printf("prot is %u, queue is %u, ring_tx_size is %u\n", i, j, app.ring_tx_size);
             app.rings_tx[i][j] = rte_ring_create(
                     name,
                     app.ring_tx_size,

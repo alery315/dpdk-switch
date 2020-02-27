@@ -3,6 +3,8 @@
 //
 #include "main.h"
 
+#define DIFF(a,b) a > b ? a - b : 0
+
 static void
 log_qlen_info(uint32_t port_id) {
     uint32_t q, queues = app.n_queues;
@@ -26,13 +28,44 @@ log_qlen_info(uint32_t port_id) {
 
 static void
 log_threshold(uint32_t port_id) {
+
+    // 为了防止计数器爆表
+    for (uint32_t j = 0; j < app.n_ports; ++j) {
+        uint64_t d = app.qlen_bytes_out[j] / 2;
+        if (app.qlen_bytes_in[j] > d) {
+            app.qlen_bytes_in[j] -= d;
+            app.qlen_bytes_out[j] = app.qlen_bytes_out[j] / 2;
+            printf("switch: update app.qlen_bytes_out");
+        } else {
+            app.qlen_bytes_in[j] = app.qlen_bytes_out[j] + 128;
+        }
+        RTE_LOG(
+                INFO, SWITCH,
+                "%s: --------------qlen_in is > %lu, qlen_out is %lu, qlen_drop is %lu\n",
+                __func__,
+                app.qlen_bytes_in[j],
+                app.qlen_bytes_out[j],
+                app.qlen_drop[j]
+
+        );
+    }
+
+    if (app.edt_policy) {
+        RTE_LOG(
+                INFO, SWITCH,
+                "%s: -------------------------------unControl times is %u\n",
+                __func__,
+                app.unControlNums
+        );
+    }
+
     if (app.awa_policy) {
         uint32_t threshold;
         for (uint32_t i = 0; i < app.n_queues; ++i) {
             threshold = app.get_threshold(i);
             RTE_LOG(
                     INFO, SWITCH,
-                    "%s: ---------------------------------------------------------the threshold of queue %d is > %u, buffer occu is %lu\n",
+                    "%s: ---------------------------------------the threshold of queue %d is > %u, buffer occu is %lu\n",
                     __func__,
                     port_id,
                     threshold / 1024,
@@ -44,7 +77,7 @@ log_threshold(uint32_t port_id) {
     uint32_t threshold = app.get_threshold(port_id);
     RTE_LOG(
             INFO, SWITCH,
-            "%s: ---------------------------------------------------------the threshold of port %d is > %u, buffer occu is %lu\n",
+            "%s: ----------------------------------------------------------------------------------------the threshold of port %d is > %u, buffer occu is %lu\n",
             __func__,
             port_id,
             threshold / 1024,
@@ -123,13 +156,13 @@ app_main_loop_logging(void) {
 
         log_threshold(i);
 
-        log_qlen_info(i);
+//        log_qlen_info(i);
 
 //        log_transmit_args(i);
 
 
 
-        sleep(3);
+        sleep(1);
     }
 }
 

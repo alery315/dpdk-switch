@@ -1,12 +1,26 @@
 #include "main.h"
 
-// 平均分配策略
+#define DIFF(a,b) a > b ? a - b : 0
+#define LEVEL DEBUG
+
+static uint64_t u_diff(uint64_t x, uint64_t y) {
+    return (x > y ? (x-y) : (64));
+}
+
+// 固定分配策略
 uint32_t
 qlen_threshold_equal_division(uint32_t port_id) {
     // port_id * 2 ???
     port_id = port_id << 1; /* prevent warning */
     uint32_t result = app.buff_size_bytes / app.n_ports;
     return result;
+}
+
+uint32_t
+qlen_threshold_cs(uint32_t port_id) {
+    port_id = port_id << 1; /* prevent warning */
+//    printf("complete sharing %u\n",app.buff_size_bytes);
+    return app.buff_size_bytes;
 }
 
 // 根据DT分配策略
@@ -21,8 +35,9 @@ uint32_t
 qlen_threshold_edt(uint32_t port_id){
     if (app.isUnControl[port_id]) {
         uint8_t n_unControl = 0;
-        for (uint8_t i = 0; i < app.n_ports; i++) {
-            n_unControl++;
+        for (uint32_t i = 0; i < app.n_ports; i++) {
+            if(app.isUnControl[i])
+                n_unControl++;
         }
 //        printf("port %u is uncontrol, threshold is %u\n", port_id, app.buff_size_bytes / n_unControl);
         return app.buff_size_bytes / n_unControl;
@@ -37,7 +52,7 @@ qlen_threshold_awa(uint32_t queue_id) {
 
 // 已经进来 - 已经出去 = 还在输出队列中的占用着buf的
 uint64_t get_qlen_bytes(uint32_t port_id) {
-    return app.qlen_bytes_in[port_id] - app.qlen_bytes_out[port_id];
+    return u_diff(app.qlen_bytes_in[port_id], app.qlen_bytes_out[port_id]);
 }
 
 // 获得总buf占用,byte为单位
@@ -45,7 +60,8 @@ uint64_t get_buff_occu_bytes(void) {
     uint64_t result = 0;
     uint32_t i;
     for (i = 0; i < app.n_ports; i++) {
-        result += (app.qlen_bytes_in[i] - app.qlen_bytes_out[i]);
+//        result += (app.qlen_bytes_in[i] - app.qlen_bytes_out[i]);
+        result += DIFF(app.qlen_bytes_in[i],app.qlen_bytes_out[i]);
     }
     return result;
     //return app.buff_bytes_in - app.buff_bytes_out;
@@ -83,9 +99,9 @@ uint64_t get_buff_occu_bytes(void) {
  */
 int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt) {
     int ret = 0;
-    // int mark_pkt = 0, mark_ret;
-    // 获取目标端口的queue长度,bytes为单位,in - out,就是还在交换机中的数据,占用了缓存的数据量
+    int mark_pkt = 0, mark_ret;
 
+    // 获取目标端口的queue长度,bytes为单位,in - out,就是还在交换机中的数据,占用了缓存的数据量
     uint32_t qlen_bytes = get_qlen_bytes(dst_port);
 
     // 定义阈值
@@ -104,12 +120,15 @@ int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt) 
         buff_occu_bytes = get_buff_occu_bytes();
         // get_threshold 获得阈值回调函数,可以根据配置文件读取,equal division 或者 DT
         if (app.awa_policy) {
+            // 由于这两个是端口级别的,所以需要把qlen_enque转成端口级别判断
             threshold = app.get_threshold(dst_queue);
             qlen_enque = app.qlen_bytes_in_queue[dst_port][dst_queue] - app.qlen_bytes_out_queue[dst_port][dst_queue];
             qlen_enque += pkt->pkt_len;
         } else if (app.rl_policy) {
             threshold = app.port_threshold[dst_port][dst_queue];
-        } else{
+            qlen_enque = app.qlen_bytes_in_queue[dst_port][dst_queue] - app.qlen_bytes_out_queue[dst_port][dst_queue];
+            qlen_enque += pkt->pkt_len;
+        } else {
             threshold = app.get_threshold(dst_port);
         }
 
@@ -123,7 +142,7 @@ int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt) 
         ret = -2;
     }
 
-    // ECN marking
+//    // ECN marking
 //    if (ret == 0 && mark_pkt) {
 //        /* do ecn marking */
 //        mark_ret = mark_packet_with_ecn(pkt);
@@ -158,6 +177,7 @@ int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt) 
             // 更新输出队列 in pkt
             app.qlen_pkts_in[dst_port]++;
             app.qlen_pkts_in_queue[dst_port][dst_queue] ++;
+            // 改变优先级
             app.queue_priority[dst_port] = dst_queue > app.queue_priority[dst_port] ? dst_queue : app.queue_priority[dst_port];
 
             /* enqueue */
@@ -183,7 +203,8 @@ int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt) 
                 if (app.counter2_e[dst_port] - app.counter2_d[dst_port] >= app.C2) {
                     app.time2[dst_port] = rte_get_tsc_cycles();
                     app.isUnControl[dst_port] = 1;
-                    printf("*********************%u is uncontrol****************\n", dst_port);
+                    app.unControlNums++;
+//                    printf("*********************%u is uncontrol****************\n", dst_port);
                 }
 
 //                if (app.counter1[dst_port] == app.C1) {
@@ -192,7 +213,7 @@ int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt) 
 
                 if (app.isUnControl[dst_port] && rte_get_tsc_cycles() - app.time2[dst_port] > app.scale_max_burst_time) {
                     app.isUnControl[dst_port] = 0;
-                    printf("*********************%u is control time expired****************\n", dst_port);
+//                    printf("*********************%u is control time expired****************\n", dst_port);
                 }
 
                 // 假如出队列不更新状态,是否会锁死直到下一个包进来
@@ -258,27 +279,27 @@ int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt) 
     switch (ret) {
     case 0:
         RTE_LOG(
-            DEBUG, SWITCH,
+            LEVEL, SWITCH,
             "%s: packet enqueue to port %u queue %u\n",
             __func__, app.ports[dst_port], dst_queue
         );
         break;
     case -1:
         RTE_LOG(
-            DEBUG, SWITCH,
+            LEVEL, SWITCH,
             "%s: Packet dropped due to queue length > threshold\n",
             __func__
         );
         break;
     case -2:
         RTE_LOG(
-            DEBUG, SWITCH,
+            LEVEL, SWITCH,
             "%s: Packet dropped due to buffer overflow\n",
             __func__
         );
     case -3:
         RTE_LOG(
-            DEBUG, SWITCH,
+            LEVEL, SWITCH,
             "%s: Cannot mark packet with ECN, drop packet\n",
             __func__
         );

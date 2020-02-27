@@ -161,7 +161,7 @@ void app_main_tx_port(uint32_t port_id) {
                 app.counter2_d[port_id] = 0;
                 app.isUnControl[port_id] = 0;
                 app.counter1[port_id] = 0;
-                printf("*********************%u is control C1 out****************\n", port_id);
+//                printf("*********************%u is control C1 out****************\n", port_id);
             }
 
             // e ++?
@@ -177,7 +177,7 @@ void app_main_tx_port(uint32_t port_id) {
 
             if (app.isUnControl[port_id] && rte_get_tsc_cycles() - app.time2[port_id] > app.scale_max_burst_time) {
                 app.isUnControl[port_id] = 0;
-                printf("*********************%u is control time expired****************\n", port_id);
+//                printf("*********************%u is control time expired****************\n", port_id);
             }
 
         }

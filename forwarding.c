@@ -255,6 +255,7 @@ app_main_loop_forwarding(uint32_t port_id) {
         // 根据dst_addr查找目标端口
         dst_port = app_l2_lookup(&(eth->d_addr), port_id);
 
+        // log mac address
 //        RTE_LOG(
 //                INFO, HASH,
 //                "%s: ------------------------------source mac address is :"

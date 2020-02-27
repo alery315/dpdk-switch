@@ -6,6 +6,8 @@
 #include <time.h>
 #include <pthread.h>
 
+#define DIFF(a,b) a > b ? a - b : 0
+
 int64_t getCurrentTime()      //直接调用这个函数就行了，返回值最好是int64_t，long long应该也可以
 {
     struct timeval tv;
@@ -77,33 +79,37 @@ int main() {
 //    sleep(1);
 //    printf("%ld\n", getCurrentTime());
 
-    pthread_t id[4];
-    int i, ret;
+//    pthread_t id[4];
+//    int i, ret;
+//
+//    // 成功返回0，错误返回错误编号
+//    for (i = 0; i < 4; i++) {
+//        ret = pthread_create(&id[i], NULL, (void *) thread, (void *)i);
+//        if (ret != 0) {
+//            printf("Create pthread error!\n");
+//            exit(1);
+//        }
+//    }
+//
+//
+//    for (i = 0; i < 3; i++)
+//        printf("This is main process. time is %ld\n", getCurrentTime());
+//
+//    for (i = 0; i < 4; i++) {
+//        pthread_join(id[i], NULL);
+//    }
+//
+//    printf("time is %ld\n", getCurrentTime());
+//    for (int j = 0; j < 99999999; ++j) {
+//        getCurrentTime();
+//    }
+//    printf("time is %ld\n", getCurrentTime());
 
-    // 成功返回0，错误返回错误编号
-    for (i = 0; i < 4; i++) {
-        ret = pthread_create(&id[i], NULL, (void *) thread, (void *)i);
-        if (ret != 0) {
-            printf("Create pthread error!\n");
-            exit(1);
-        }
-    }
-
-
-    for (i = 0; i < 3; i++)
-        printf("This is main process. time is %ld\n", getCurrentTime());
-
-    for (i = 0; i < 4; i++) {
-        pthread_join(id[i], NULL);
-    }
-
-    printf("time is %ld\n", getCurrentTime());
-    for (int j = 0; j < 99999999; ++j) {
-        getCurrentTime();
-    }
-    printf("time is %ld\n", getCurrentTime());
-
-
+    __uint64_t a = 100;
+    printf("%lu\n", a >> 1);
+    printf("%d\n", DIFF(10, 20));
+    printf("%d\n", DIFF(10, 10));
+    printf("%d\n", DIFF(20, 10));
 
     return 0;
 }
