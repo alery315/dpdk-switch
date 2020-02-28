@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" serverName="sw" showEqualInSync="true">
+    <serverData>
+      <paths name="sw">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/sw/dpdk-switch" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+          <excludedPaths>
+            <excludedPath path="/home/sw/dpdk-switch/build" />
+          </excludedPaths>
+        </serverdata>
+      </paths>
+    </serverData>
+  </component>
+</project>

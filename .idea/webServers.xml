@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="90c51ad8-aa83-41e9-b54d-2885fc490cc1" name="sw" url="http://166.111.68.231">
+        <fileTransfer host="166.111.68.231" port="10001" accessType="SFTP">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+          <option name="port" value="10001" />
+        </fileTransfer>
+      </webServer>
+      <webServer id="7093c2e4-3a93-4c2d-8dc2-2511c6ba03a0" name="dc-5" url="http://192.168.0.15">
+        <fileTransfer host="192.168.0.15" port="22" accessType="SFTP">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+          <option name="port" value="22" />
+        </fileTransfer>
+      </webServer>
+      <webServer id="59b202ff-d017-4f2a-9d4f-a92e90feb6e9" name="pktgen" url="http://192.168.0.115">
+        <fileTransfer host="192.168.0.115" port="22" accessType="SFTP">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+          <option name="port" value="22" />
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
