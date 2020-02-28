@@ -9,8 +9,6 @@ i will change some code implement.
 
 i will add RL policy(use RL to manage buffer).
 
-test branch
-
 This is a l2 learning switch based on DPDK.
 
 # Features
