@@ -1,7 +1,6 @@
 #include "main.h"
 
 #define DIFF(a,b) a > b ? a - b : 0
-#define LEVEL DEBUG
 
 static uint64_t u_diff(uint64_t x, uint64_t y) {
     return (x > y ? (x-y) : (64));
@@ -97,7 +96,7 @@ uint64_t get_buff_occu_bytes(void) {
  * -2 Packet dropped due to buffer overflow
  * -3 Cannot mark packet with ECN, drop packet
  */
-int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt) {
+int packet_enqueue(uint32_t dst_port, struct rte_mbuf *pkt) {
     int ret = 0;
     int mark_pkt = 0, mark_ret;
 
@@ -119,15 +118,12 @@ int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt) 
         // ------------???这个地方是否需要换到下面去执行,因为中间几行代码有执行时延--------
         buff_occu_bytes = get_buff_occu_bytes();
         // get_threshold 获得阈值回调函数,可以根据配置文件读取,equal division 或者 DT
-        if (app.awa_policy) {
+        if (app.rl_policy) {
+            threshold = app.port_threshold[dst_port];
             // 由于这两个是端口级别的,所以需要把qlen_enque转成端口级别判断
-            threshold = app.get_threshold(dst_queue);
-            qlen_enque = app.qlen_bytes_in_queue[dst_port][dst_queue] - app.qlen_bytes_out_queue[dst_port][dst_queue];
-            qlen_enque += pkt->pkt_len;
-        } else if (app.rl_policy) {
-            threshold = app.port_threshold[dst_port][dst_queue];
-            qlen_enque = app.qlen_bytes_in_queue[dst_port][dst_queue] - app.qlen_bytes_out_queue[dst_port][dst_queue];
-            qlen_enque += pkt->pkt_len;
+//            threshold = app.get_threshold(dst_queue);
+//            qlen_enque = app.qlen_bytes_in_queue[dst_port][dst_queue] - app.qlen_bytes_out_queue[dst_port][dst_queue];
+//            qlen_enque += pkt->pkt_len;
         } else {
             threshold = app.get_threshold(dst_port);
         }
@@ -156,7 +152,7 @@ int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt) 
     if (ret == 0) {
         // 添加到目标队列的ring_tx中
         int enqueue_ret = rte_ring_sp_enqueue(
-            app.rings_tx[dst_port][dst_queue],
+            app.rings_tx[dst_port],
             pkt
         );
         if (enqueue_ret != 0) {
@@ -173,12 +169,12 @@ int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt) 
 //                    __func__, app.ports[dst_port], dst_queue
 //            );
             app.qlen_bytes_in[dst_port] += pkt->pkt_len;
-            app.qlen_bytes_in_queue[dst_port][dst_queue] += pkt->pkt_len;
+//            app.qlen_bytes_in_queue[dst_port][dst_queue] += pkt->pkt_len;
             // 更新输出队列 in pkt
             app.qlen_pkts_in[dst_port]++;
-            app.qlen_pkts_in_queue[dst_port][dst_queue] ++;
+//            app.qlen_pkts_in_queue[dst_port][dst_queue] ++;
             // 改变优先级
-            app.queue_priority[dst_port] = dst_queue > app.queue_priority[dst_port] ? dst_queue : app.queue_priority[dst_port];
+//            app.queue_priority[dst_port] = dst_queue > app.queue_priority[dst_port] ? dst_queue : app.queue_priority[dst_port];
 
             /* enqueue */
             if (app.edt_policy) {
@@ -273,33 +269,33 @@ int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt) 
         }
 //        printf("drop one packet");
         app.qlen_drop[dst_port]++;
-        app.qlen_drop_queue[dst_port][dst_queue]++;
+//        app.qlen_drop_queue[dst_port][dst_queue]++;
 
     }
     switch (ret) {
     case 0:
         RTE_LOG(
-            LEVEL, SWITCH,
-            "%s: packet enqueue to port %u queue %u\n",
-            __func__, app.ports[dst_port], dst_queue
+            DEBUG, SWITCH,
+            "%s: packet enqueue to port %u\n",
+            __func__, app.ports[dst_port]
         );
         break;
     case -1:
         RTE_LOG(
-            LEVEL, SWITCH,
+            DEBUG, SWITCH,
             "%s: Packet dropped due to queue length > threshold\n",
             __func__
         );
         break;
     case -2:
         RTE_LOG(
-            LEVEL, SWITCH,
+            DEBUG, SWITCH,
             "%s: Packet dropped due to buffer overflow\n",
             __func__
         );
     case -3:
         RTE_LOG(
-            LEVEL, SWITCH,
+            DEBUG, SWITCH,
             "%s: Cannot mark packet with ECN, drop packet\n",
             __func__
         );

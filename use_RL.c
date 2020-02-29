@@ -278,8 +278,8 @@ run_session(float *values_p, int data_length) {
     for (int i = 0; i < out_put_dim; ++i) {
         printf("%f ", *(out_values + i));
         last_threshold[i] = ((*(out_values + i)) + 1) / 2;
-        app.port_threshold[0][i] = (int64_t) (((*(out_values + i)) + 1) / 2.0 * buffer_size);
-        printf("queue is %d, threshold is %ld\n", i, app.port_threshold[0][i]);
+        app.port_threshold[0] = (int64_t) (((*(out_values + i)) + 1) / 2.0 * buffer_size);
+        printf("queue is %d, threshold is %ld\n", i, app.port_threshold[0]);
     }
     printf("\n");
 

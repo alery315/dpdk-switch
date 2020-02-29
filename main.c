@@ -117,30 +117,28 @@ app_lcore_main_loop(__attribute__((unused)) void *arg) {
     // 返回正在运行的核
     lcore = rte_lcore_id();
 
-    for (i = 0; i < app.n_ports; i++) {
-        if (lcore == app.core_rx[i]) {
-            RTE_LOG(
-                    INFO, SWITCH,
-                    "%s: current lcore is %u, doing main loop rx, port is %u ...\n",
-                    __func__, lcore, i
-            );
-            app_main_loop_rx(i);
-            return 0;
-        }
+
+    if (lcore == app.core_rx) {
+        RTE_LOG(
+                INFO, SWITCH,
+                "%s: current lcore is %u, doing main loop rx...\n",
+                __func__, lcore
+        );
+        app_main_loop_rx();
+        return 0;
     }
 
 
-    for (i = 0; i < app.n_ports; i++) {
-        if (lcore == app.core_worker[i]) {
-            RTE_LOG(
-                    INFO, SWITCH,
-                    "%s: current lcore is %u, doing main loop forwarding, port is %u ...\n",
-                    __func__, lcore, i
-            );
-            app_main_loop_forwarding(i);
-            return 0;
-        }
+    if (lcore == app.core_worker) {
+        RTE_LOG(
+                INFO, SWITCH,
+                "%s: current lcore is %u, doing main loop forwarding...\n",
+                __func__, lcore
+        );
+        app_main_loop_forwarding();
+        return 0;
     }
+
 
 
     if (lcore == app.core_rl && app.rl_policy) {

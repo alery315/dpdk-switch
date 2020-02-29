@@ -147,17 +147,17 @@ app_init_rings(void) {
     for (i = 0; i < app.n_ports; i++) {
         char name[32];
 
-        for (j = 0; j < app.n_queues; j++) {
-            snprintf(name, sizeof(name), "app_ring_rx_%u_%u", i, j);
-            app.rings_rx[i][j] = rte_ring_create(
-                    name,
-                    app.ring_rx_size,
-                    rte_socket_id(),
-                    RING_F_SP_ENQ | RING_F_SC_DEQ); // single producer | single consumer
+//        for (j = 0; j < app.n_queues; j++) {
+        snprintf(name, sizeof(name), "app_ring_rx_%u", i);
+        app.rings_rx[i] = rte_ring_create(
+                name,
+                app.ring_rx_size,
+                rte_socket_id(),
+                RING_F_SP_ENQ | RING_F_SC_DEQ); // single producer | single consumer
 
-            if (app.rings_rx[i][j] == NULL)
-                rte_panic("Cannot create RX ring %u queue %u\n", i, j);
-        }
+        if (app.rings_rx[i] == NULL)
+            rte_panic("Cannot create RX ring %u\n", i);
+//        }
 
     }
 
@@ -167,29 +167,30 @@ app_init_rings(void) {
     for (i = 0; i < app.n_ports; i++) {
         char name[32];
 
-        for (j = 0; j < app.n_queues; j++) {
-            snprintf(name, sizeof(name), "app_ring_tx_%u_%u", i, j);
+//        for (j = 0; j < app.n_queues; j++) {
+        snprintf(name, sizeof(name), "app_ring_tx_%u", i);
 //            printf("prot is %u, queue is %u, ring_tx_size is %u\n", i, j, app.ring_tx_size);
-            app.rings_tx[i][j] = rte_ring_create(
-                    name,
-                    app.ring_tx_size,
-                    rte_socket_id(),
-                    RING_F_SP_ENQ | RING_F_SC_DEQ);
+        app.rings_tx[i] = rte_ring_create(
+                name,
+                app.ring_tx_size,
+                rte_socket_id(),
+                RING_F_SP_ENQ | RING_F_SC_DEQ);
 
-            if (app.rings_tx[i][j] == NULL)
-                rte_panic("Cannot create TX ring %u queue %u\n", i, j);
-            app.qlen_pkts_in_queue[i][j] = app.qlen_pkts_out_queue[i][j] = 0;
-            app.qlen_bytes_in_queue[i][j] = app.qlen_bytes_out_queue[i][j] = 0;
-            app.qlen_drop_queue[i][j] = 0;
-        }
+        if (app.rings_tx[i] == NULL)
+            rte_panic("Cannot create TX ring %u\n", i);
+//            app.qlen_pkts_in_queue[i][j] = app.qlen_pkts_out_queue[i][j] = 0;
+//            app.qlen_bytes_in_queue[i][j] = app.qlen_bytes_out_queue[i][j] = 0;
+//            app.qlen_drop_queue[i][j] = 0;
+
         app.qlen_bytes_in[i] = app.qlen_pkts_in[i] = 0;
         app.qlen_bytes_out[i] = app.qlen_pkts_out[i] = 0;
         app.qlen_drop[i] = 0;
-        app.queue_priority[i] = 0;
+//        app.queue_priority[i] = 0;
         app.counter2_e[i] = app.counter2_d[i] = 0;
-    }
 
+    }
 }
+
 
 static void
 app_ports_check_link(void) {
@@ -227,20 +228,20 @@ app_init_ports(void) {
     /* Init NIC ports, then start the ports */
     for (i = 0; i < app.n_ports; i++) {
         uint8_t port;
-        uint8_t queues;
-        uint32_t q;
+//        uint8_t queues;
+//        uint32_t q;
         int ret;
 
         port = (uint8_t) app.ports[i];
-        queues = (uint8_t) app.n_queues;
+//        queues = (uint8_t) app.n_queues;
         RTE_LOG(INFO, SWITCH, "Initializing NIC port %u ...\n", port);
 
         /* Init port */
         /* config tx & rx queue */
         ret = rte_eth_dev_configure(
             port,
-            queues,
-            queues,
+            1,
+            1,
             &port_conf);
         if (ret < 0)
             rte_panic("Cannot init NIC port %u (%d)\n", port, ret);
@@ -250,32 +251,32 @@ app_init_ports(void) {
 
         /* Init RX queues */
         /* 这里加内存循环,加队列 */
-        for (q = 0; q < queues; q++) {
-            ret = rte_eth_rx_queue_setup(
-                    port,
-                    q,
-                    app.port_rx_ring_size,
-                    rte_eth_dev_socket_id(port),
-                    &rx_conf,
-                    app.pool);
-            if (ret < 0)
-                rte_panic("Cannot init RX for port %u queue %u(%d)\n",
-                          (uint32_t) port, q, ret);
-        }
+//        for (q = 0; q < queues; q++) {
+        ret = rte_eth_rx_queue_setup(
+                port,
+                0,
+                app.port_rx_ring_size,
+                rte_eth_dev_socket_id(port),
+                &rx_conf,
+                app.pool);
+        if (ret < 0)
+            rte_panic("Cannot init RX for port %u (%d)\n",
+                      (uint32_t) port, ret);
+//        }
 
 
         /* Init TX queues */
-        for (q = 0; q < queues; q++) {
-            ret = rte_eth_tx_queue_setup(
-                    port,
-                    q,
-                    app.port_tx_ring_size,
-                    rte_eth_dev_socket_id(port),
-                    &tx_conf);
-            if (ret < 0)
-                rte_panic("Cannot init TX for port %u queue %u(%d)\n",
-                          (uint32_t) port, q, ret);
-        }
+//        for (q = 0; q < queues; q++) {
+        ret = rte_eth_tx_queue_setup(
+                port,
+                0,
+                app.port_tx_ring_size,
+                rte_eth_dev_socket_id(port),
+                &tx_conf);
+        if (ret < 0)
+            rte_panic("Cannot init TX for port %u(%d)\n",
+                      (uint32_t) port, ret);
+//        }
 
         /* Start port */
         ret = rte_eth_dev_start(port);
@@ -287,7 +288,7 @@ app_init_ports(void) {
 }
 
 int
-app_init_forwarding_table(uint32_t port_id) {
+app_init_forwarding_table(void) {
 //    size_t name_len = strlen(tname);
 //    if (name_len > MAX_NAME_LEN) {
 //        RTE_LOG(
@@ -297,7 +298,7 @@ app_init_forwarding_table(uint32_t port_id) {
 //        );
 //        return -1;
 //    }
-    sprintf(app.ft_name, "forwarding_table_%u", port_id);
+    sprintf(app.ft_name, "forwarding_table");
     struct rte_hash_parameters hash_params = {
         .name = app.ft_name,
         .entries = FORWARD_ENTRY,
@@ -306,8 +307,8 @@ app_init_forwarding_table(uint32_t port_id) {
         .hash_func_init_val = 0,
     };
 
-    app.l2_hash[port_id] = rte_hash_create(&hash_params);
-    if (app.l2_hash[port_id] == NULL) {
+    app.l2_hash = rte_hash_create(&hash_params);
+    if (app.l2_hash == NULL) {
         RTE_LOG(ERR, HASH, "%s: ERROR when create hash table.\n", __func__);
         return -1;
     }
@@ -320,9 +321,7 @@ app_init(void) {
     app_init_mbuf_pools();
     app_init_rings();
     app_init_ports();
-    for (i = 0; i < app.n_ports; i++) {
-        app_init_forwarding_table(i);
-    }
+    app_init_forwarding_table();
     app_init_locks();
 
     RTE_LOG(INFO, SWITCH, "Initialization completed\n");

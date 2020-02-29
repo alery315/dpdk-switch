@@ -159,8 +159,8 @@ struct app_params {
 
     /* CPU cores */
     uint32_t n_lcores;
-    uint32_t core_rx[RTE_MAX_LCORE];
-    uint32_t core_worker[RTE_MAX_LCORE];
+    uint32_t core_rx;
+    uint32_t core_worker;
     uint32_t core_tx[RTE_MAX_LCORE];
     uint32_t core_log;
     uint32_t core_rl;
@@ -235,17 +235,17 @@ struct app_params {
     int64_t qlen_drop[APP_MAX_PORTS];
     int64_t qlen_drop_queue[APP_MAX_PORTS][APP_MAX_QUEUES];
 
-    int64_t port_threshold[APP_MAX_PORTS][APP_MAX_QUEUES];
+    int64_t port_threshold[APP_MAX_PORTS];
 
     /* Rings */
-    struct rte_ring *rings_rx[APP_MAX_PORTS][APP_MAX_QUEUES];
-    struct rte_ring *rings_tx[APP_MAX_PORTS][APP_MAX_QUEUES];
+    struct rte_ring *rings_rx[APP_MAX_PORTS];
+    struct rte_ring *rings_tx[APP_MAX_PORTS];
     uint32_t ring_rx_size;
     uint32_t ring_tx_size;
 
     /* Internal buffers */
-    struct app_mbuf_array mbuf_rx[APP_MAX_PORTS][APP_MAX_QUEUES];
-    struct app_mbuf_array mbuf_tx[APP_MAX_PORTS][APP_MAX_QUEUES];
+    struct app_mbuf_array mbuf_rx;
+    struct app_mbuf_array mbuf_tx[APP_MAX_PORTS];
 
     /* Buffer pool */
     struct rte_mempool *pool;
@@ -265,9 +265,9 @@ struct app_params {
     // uint32_t pipeline_type;
 
     /* things about forwarding table */
-    struct app_fwd_table_item fwd_table[APP_MAX_PORTS][FORWARD_ENTRY];
+    struct app_fwd_table_item fwd_table[FORWARD_ENTRY];
     char ft_name[MAX_NAME_LEN]; /* forward table name */
-    struct rte_hash *l2_hash[APP_MAX_PORTS];
+    struct rte_hash *l2_hash;
     uint64_t fwd_item_valid_time; /* valide time of forward item, in CPU cycles */
 
     uint32_t ecn_thresh_kb;
@@ -288,9 +288,9 @@ void app_init(void);
 
 int app_lcore_main_loop(void *arg);
 
-void app_main_loop_rx(uint32_t);
+void app_main_loop_rx();
 
-void app_main_loop_forwarding(uint32_t);
+void app_main_loop_forwarding();
 
 void app_main_loop_tx_each_port(uint32_t);
 
@@ -309,7 +309,7 @@ void app_main_loop_RL(void);
  * Return 0 when OK, -1 when there is error.
  */
 //int app_init_forwarding_table(const char *tname, uint32_t port_id);
-int app_init_forwarding_table(uint32_t port_id);
+int app_init_forwarding_table(void);
 
 /*
  * Return 0 when OK, -1 when there is error.
@@ -319,7 +319,7 @@ int app_l2_learning(const struct ether_addr *srcaddr, uint8_t port);
 /*
  * Return port id to forward (broadcast if negative)
  */
-int app_l2_lookup(const struct ether_addr *addr, uint8_t port_id);
+int app_l2_lookup(const struct ether_addr *addr);
 
 uint64_t get_qlen_bytes(uint32_t port_id);
 
@@ -331,7 +331,7 @@ uint64_t get_buff_occu_bytes(void);
  *  0: succeed, < 0: packet dropped
  *  -1: queue length > threshold, -2: buffer overflow, -3: other unknown reason
 */
-int packet_enqueue(uint32_t dst_port, uint32_t dst_queue, struct rte_mbuf *pkt);
+int packet_enqueue(uint32_t dst_port, struct rte_mbuf *pkt);
 
 /*
  * Get port qlen threshold for a port

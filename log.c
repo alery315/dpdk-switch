@@ -4,6 +4,7 @@
 #include "main.h"
 
 #define DIFF(a,b) a > b ? a - b : 0
+#define SLEEP_TIME 1
 
 static void
 log_qlen_info(uint32_t port_id) {
@@ -35,13 +36,13 @@ log_threshold(uint32_t port_id) {
         if (app.qlen_bytes_in[j] > d) {
             app.qlen_bytes_in[j] -= d;
             app.qlen_bytes_out[j] = app.qlen_bytes_out[j] / 2;
-            printf("switch: update app.qlen_bytes_out");
+            printf("switch: update ");
         } else {
             app.qlen_bytes_in[j] = app.qlen_bytes_out[j] + 128;
         }
         RTE_LOG(
                 INFO, SWITCH,
-                "%s: --------------qlen_in is > %lu, qlen_out is %lu, qlen_drop is %lu\n",
+                "%s: --------qlen_in is > %lu, qlen_out is %lu, qlen_drop is %lu\n",
                 __func__,
                 app.qlen_bytes_in[j],
                 app.qlen_bytes_out[j],
@@ -59,25 +60,25 @@ log_threshold(uint32_t port_id) {
         );
     }
 
-    if (app.awa_policy) {
-        uint32_t threshold;
-        for (uint32_t i = 0; i < app.n_queues; ++i) {
-            threshold = app.get_threshold(i);
-            RTE_LOG(
-                    INFO, SWITCH,
-                    "%s: ---------------------------------------the threshold of queue %d is > %u, buffer occu is %lu\n",
-                    __func__,
-                    port_id,
-                    threshold / 1024,
-                    get_buff_occu_bytes() / 1024
-            );
-        }
-        return;
-    }
+//    if (app.awa_policy) {
+//        uint32_t threshold;
+//        for (uint32_t i = 0; i < app.n_queues; ++i) {
+//            threshold = app.get_threshold(i);
+//            RTE_LOG(
+//                    INFO, SWITCH,
+//                    "%s: ---------------------------------------the threshold of queue %d is > %u, buffer occu is %lu\n",
+//                    __func__,
+//                    port_id,
+//                    threshold / 1024,
+//                    get_buff_occu_bytes() / 1024
+//            );
+//        }
+//        return;
+//    }
     uint32_t threshold = app.get_threshold(port_id);
     RTE_LOG(
             INFO, SWITCH,
-            "%s: ----------------------------------------------------------------------------------------the threshold of port %d is > %u, buffer occu is %lu\n",
+            "%s: ------------------------------------------------the threshold of port %d is > %u, buffer occu is %lu\n",
             __func__,
             port_id,
             threshold / 1024,
@@ -92,7 +93,7 @@ log_threshold(uint32_t port_id) {
 //               app.counter2_e[port_id] - app.counter2_d[port_id]);
 
         for (uint32_t i = 0; i < app.n_queues; ++i) {
-            printf("queue is %d, threshold is %ld\n", i, app.port_threshold[0][i]);
+            printf("queue is %d, threshold is %ld\n", i, app.port_threshold[0]);
         }
         printf("********************************************************\n");
     }
@@ -162,7 +163,7 @@ app_main_loop_logging(void) {
 
 
 
-        sleep(1);
+        sleep(SLEEP_TIME);
     }
 }
 

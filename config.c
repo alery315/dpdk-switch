@@ -231,7 +231,7 @@ app_read_config_file(const char *fname) {
             );
             for (uint32_t i = 0; i < app.n_ports; ++i) {
                 for (uint32_t j = 0; j < app.n_queues; ++j) {
-                    app.port_threshold[i][j] = threshold;
+                    app.port_threshold[i] = threshold;
                 }
             }
         } else {
@@ -398,20 +398,20 @@ app_parse_args(int argc, char **argv) {
 
     // 前俩核一个rx,一个worker,剩下的为每个端口的tx分配一个核,最后一个核做log
 
-    // rx 改为多核
-    for (i = 0; i < app.n_ports; i++) {
-        app.core_rx[i] = lcores[i];
-//        app.core_rx[i] = lcores[i * 3];
-//        app.core_worker[i] = lcores[i * 3 + 1];
-//        app.core_tx[i] = lcores[i * 3 + 2];
-    }
+    // rx forward 改为多核
+//    for (i = 0; i < app.n_ports; i++) {
+//        app.core_rx[i] = lcores[i];
+//    }
+//    for (i = 0; i < app.n_ports; i++) {
+//        app.core_worker[i] = lcores[i + app.n_ports];
+//    }
 
-//    app.core_worker = lcores[1];
+    app.core_rx = lcores[0];
+    app.core_worker = lcores[1];
+
+
     for (i = 0; i < app.n_ports; i++) {
-        app.core_worker[i] = lcores[i + app.n_ports];
-    }
-    for (i = 0; i < app.n_ports; i++) {
-        app.core_tx[i] = lcores[i + app.n_ports + app.n_ports];
+        app.core_tx[i] = lcores[i + 2];
     }
     app.core_rl = lcores[n_lcores - 2];
     app.core_log = lcores[n_lcores - 1];
