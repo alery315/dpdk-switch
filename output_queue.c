@@ -1,10 +1,7 @@
 #include "main.h"
 
-#define DIFF(a,b) a > b ? a - b : 0
+#define u_diff(a,b) ((a > b) ? (a - b) : 64)
 
-static uint64_t u_diff(uint64_t x, uint64_t y) {
-    return (x > y ? (x-y) : (64));
-}
 
 // 固定分配策略
 uint32_t
@@ -45,6 +42,12 @@ qlen_threshold_edt(uint32_t port_id){
 }
 
 uint32_t
+qlen_threshold_rl(uint32_t port_id) {
+    // (总大小 - 已占buf) * alpha
+    return ((app.buff_size_bytes - get_buff_occu_bytes()) << app.port_alpha[port_id]);
+}
+
+uint32_t
 qlen_threshold_awa(uint32_t queue_id) {
     return ((app.buff_size_bytes - get_buff_occu_bytes()) * app.priority_alpha[queue_id]);
 }
@@ -60,7 +63,7 @@ uint64_t get_buff_occu_bytes(void) {
     uint32_t i;
     for (i = 0; i < app.n_ports; i++) {
 //        result += (app.qlen_bytes_in[i] - app.qlen_bytes_out[i]);
-        result += DIFF(app.qlen_bytes_in[i],app.qlen_bytes_out[i]);
+        result += u_diff(app.qlen_bytes_in[i],app.qlen_bytes_out[i]);
     }
     return result;
     //return app.buff_bytes_in - app.buff_bytes_out;
@@ -117,16 +120,19 @@ int packet_enqueue(uint32_t dst_port, struct rte_mbuf *pkt) {
         // 所有的 in - out, buf占用
         // ------------???这个地方是否需要换到下面去执行,因为中间几行代码有执行时延--------
         buff_occu_bytes = get_buff_occu_bytes();
+
         // get_threshold 获得阈值回调函数,可以根据配置文件读取,equal division 或者 DT
-        if (app.rl_policy) {
-            threshold = app.port_threshold[dst_port];
-            // 由于这两个是端口级别的,所以需要把qlen_enque转成端口级别判断
-//            threshold = app.get_threshold(dst_queue);
-//            qlen_enque = app.qlen_bytes_in_queue[dst_port][dst_queue] - app.qlen_bytes_out_queue[dst_port][dst_queue];
-//            qlen_enque += pkt->pkt_len;
-        } else {
-            threshold = app.get_threshold(dst_port);
-        }
+//        if (app.rl_policy) {
+//            threshold = app.port_threshold[dst_port];
+//            // 由于这两个是端口级别的,所以需要把qlen_enque转成端口级别判断
+////            threshold = app.get_threshold(dst_queue);
+////            qlen_enque = app.qlen_bytes_in_queue[dst_port][dst_queue] - app.qlen_bytes_out_queue[dst_port][dst_queue];
+////            qlen_enque += pkt->pkt_len;
+//        } else {
+//            threshold = app.get_threshold(dst_port);
+//        }
+
+        threshold = app.get_threshold(dst_port);
 
         // 大于阈值了 或者 大于总buf长度了
         if (qlen_enque > threshold) {
@@ -161,7 +167,9 @@ int packet_enqueue(uint32_t dst_port, struct rte_mbuf *pkt) {
 //                "%s: packet cannot enqueue in port %u queue %u, due to no enough room in the ring\n",
 //                __func__, app.ports[dst_port], dst_queue
 //            );
-            rte_pktmbuf_free(pkt);
+            // 假如ring满了而导致没有进队，那么返回等待吧
+            return ret;
+//            rte_pktmbuf_free(pkt);
         } else {
 //            RTE_LOG(
 //                    DEBUG, SWITCH,
@@ -261,7 +269,7 @@ int packet_enqueue(uint32_t dst_port, struct rte_mbuf *pkt) {
         }
         */
     } else {
-        rte_pktmbuf_free(pkt);
+
         // EDT policy
         if (app.edt_policy) {
             app.counter2_e[dst_port] = 0;
@@ -269,7 +277,10 @@ int packet_enqueue(uint32_t dst_port, struct rte_mbuf *pkt) {
         }
 //        printf("drop one packet");
         app.qlen_drop[dst_port]++;
+        app.qlen_drop_bytes[dst_port] += pkt->pkt_len;
 //        app.qlen_drop_queue[dst_port][dst_queue]++;
+        //释放掉这个包
+        rte_pktmbuf_free(pkt);
 
     }
     switch (ret) {

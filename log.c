@@ -32,21 +32,21 @@ log_threshold(uint32_t port_id) {
 
     // 为了防止计数器爆表
     for (uint32_t j = 0; j < app.n_ports; ++j) {
-        uint64_t d = app.qlen_bytes_out[j] / 2;
-        if (app.qlen_bytes_in[j] > d) {
-            app.qlen_bytes_in[j] -= d;
-            app.qlen_bytes_out[j] = app.qlen_bytes_out[j] / 2;
-            printf("switch: update ");
-        } else {
-            app.qlen_bytes_in[j] = app.qlen_bytes_out[j] + 128;
-        }
+//        uint64_t d = app.qlen_bytes_out[j] / 2;
+//        if (app.qlen_bytes_in[j] > d) {
+//            app.qlen_bytes_in[j] -= d;
+//            app.qlen_bytes_out[j] = app.qlen_bytes_out[j] / 2;
+//            printf("switch: update ");
+//        } else {
+//            app.qlen_bytes_in[j] = app.qlen_bytes_out[j] + 128;
+//        }
         RTE_LOG(
                 INFO, SWITCH,
                 "%s: --------qlen_in is > %lu, qlen_out is %lu, qlen_drop is %lu\n",
                 __func__,
                 app.qlen_bytes_in[j],
                 app.qlen_bytes_out[j],
-                app.qlen_drop[j]
+                app.qlen_drop_bytes[j]
 
         );
     }

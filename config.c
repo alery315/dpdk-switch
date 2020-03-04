@@ -89,7 +89,7 @@ app_read_config_file(const char *fname) {
             .C2 = -1,
             .max_burst_time = -1,
             .T1 = -1,
-            .RL_init_threshold = -1,
+            .RL_init_alpha = -1,
             .cfg = NULL
     };
     cfg_opt_t opts[] = {
@@ -108,7 +108,7 @@ app_read_config_file(const char *fname) {
             CFG_SIMPLE_INT("C2", &app_cfg.C2),
             CFG_SIMPLE_INT("max_burst_time", &app_cfg.max_burst_time),
             CFG_SIMPLE_INT("T1", &app_cfg.T1),
-            CFG_SIMPLE_INT("RL_init_threshold", &app_cfg.RL_init_threshold),
+            CFG_SIMPLE_INT("RL_init_alpha", &app_cfg.RL_init_alpha),
             CFG_END()
     };
     app_cfg.cfg = cfg_init(opts, 0);
@@ -214,6 +214,7 @@ app_read_config_file(const char *fname) {
             }
         }else if (!strcmp(app_cfg.bm_policy, "RL")) {
             app.rl_policy = 1;
+            app.get_threshold = qlen_threshold_rl;
             RTE_LOG(
                     INFO, SWITCH,
                     "%s: shared memory enabled, bm_policy: RL, buffer_size: %uB=%uKiB\n",
@@ -222,17 +223,15 @@ app_read_config_file(const char *fname) {
                     app.buff_size_bytes / 1024
             );
             /* 给一个能跑起来的初始值 */
-            uint64_t threshold = app_cfg.RL_init_threshold;
+            uint32_t alpha = app_cfg.RL_init_alpha;
             RTE_LOG(
                     INFO, SWITCH,
-                    "%s: threshold of every queue is %ld\n",
+                    "%s: threshold of every queue is %d\n",
                     __func__,
-                    threshold
+                    alpha
             );
             for (uint32_t i = 0; i < app.n_ports; ++i) {
-                for (uint32_t j = 0; j < app.n_queues; ++j) {
-                    app.port_threshold[i] = threshold;
-                }
+                app.port_alpha[i] = alpha;
             }
         } else {
             RTE_LOG(
@@ -413,7 +412,12 @@ app_parse_args(int argc, char **argv) {
     for (i = 0; i < app.n_ports; i++) {
         app.core_tx[i] = lcores[i + 2];
     }
-    app.core_rl = lcores[n_lcores - 2];
+
+    for (i = 0; i < app.n_ports; ++i) {
+        app.core_rl[i] = lcores[i + 2 + app.n_ports];
+    }
+
+//    app.core_rl = lcores[n_lcores - 2];
     app.core_log = lcores[n_lcores - 1];
     app.n_lcores = n_lcores;
 

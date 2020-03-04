@@ -28,15 +28,17 @@ TF_Tensor *output_values;
 
 // input data
 int n_dims = 4;
-int64_t in_dims[] = {1, 8, 6, 8};
-int input_dims = 8 * 6 * 8;
-int one_input_dim = 6 * 8;
-int out_put_dim = 8;
-int64_t Trigger_number = 300;
-float last_threshold[8];
+int64_t in_dims[] = {1, 8, 6, 4};
+int input_dims = 8 * 6 * 4;
+int one_input_dim = 6 * 4;
+int out_put_dim = 4;
+int64_t Trigger_number = 20;
+float last_threshold[4];
 float buffer_size;
+int upper = 9;
+int lower = -6;
 
-const char *file = "nn_model_ep_2060.pb";
+const char *file = "nn_model_ep_60.pb";
 const char *input_op_name = "Placeholder";
 const char *operation_name = "main/mul";
 
@@ -47,7 +49,7 @@ void init(const char *file);
 
 void pre_run_session();
 
-static void run_session(float *values_p, int data_length);
+static void run_session(uint32_t dst_port,float *values_p, int data_length);
 
 void check_status_ok(TF_Status *status, char *step);
 
@@ -59,7 +61,7 @@ static void deallocator(void *data, size_t length, void *arg);
 
 
 void
-app_main_loop_RL(void) {
+app_main_loop_RL(uint32_t dst_port) {
 
     /* init and prepare run session */
 
@@ -68,11 +70,11 @@ app_main_loop_RL(void) {
     init(file);
     pre_run_session();
 
-    buffer_size = (float)(app.buff_size_bytes / 60.0);
+    buffer_size = (float)(app.buff_size_bytes / 1.0);
 
-    uint32_t queues = app.n_queues;
-    int dst_port = 0;
+    uint32_t ports = app.n_ports;
     int64_t pre_enqueue = 0;
+    int64_t pre_dequeue = 0;
     int64_t pre_drop = 0;
     int64_t pre_time = getCurrentTime();
 
@@ -82,21 +84,22 @@ app_main_loop_RL(void) {
         values_queue[l] = 0;
     }
 
-    for (uint32_t k = 0; k < queues; ++k) {
-        last_threshold[k] = (float) app.buff_size_bytes / queues;
+    for (uint32_t k = 0; k < ports; ++k) {
+        last_threshold[k] = 1;
     }
-    int64_t en_queue[queues];
-    for (uint32_t m = 0; m < queues; ++m) {
+    int64_t en_queue[ports];
+    for (uint32_t m = 0; m < ports; ++m) {
         en_queue[m] = 0;
     }
-    int64_t dropped_queue[queues];
-    for (uint32_t n = 0; n < queues; ++n) {
+    int64_t dropped_queue[ports];
+    for (uint32_t n = 0; n < ports; ++n) {
         dropped_queue[n] = 0;
     }
 
     for (; !force_quit;) {
 
-        int64_t diff = app.qlen_pkts_in[dst_port] + app.qlen_drop[dst_port] - pre_drop - pre_enqueue;
+        int64_t diff = app.qlen_pkts_in[dst_port] + app.qlen_drop_bytes[dst_port] - app.qlen_bytes_out[dst_port] - pre_drop -
+                       pre_enqueue + pre_dequeue;
 //        int64_t diff = 1100;
 
         if (diff >= Trigger_number) {
@@ -108,19 +111,24 @@ app_main_loop_RL(void) {
 //            );
 
             int64_t trigger_number = Trigger_number;
-            for (uint32_t i = 0; i < queues; ++i) {
-                int64_t queue_length = app.qlen_pkts_in_queue[dst_port][i] - app.qlen_pkts_out_queue[dst_port][i];
-                int64_t enqueue = app.qlen_pkts_in_queue[dst_port][i] - en_queue[i];
-                en_queue[i] = app.qlen_pkts_in_queue[dst_port][i];
-                int64_t dropped = app.qlen_drop_queue[dst_port][i] - dropped_queue[i];
-                dropped_queue[i] = app.qlen_drop_queue[dst_port][i];
+            for (uint32_t i = 0; i < ports; ++i) {
+                // 组装数据
+                // 队列长度
+                int64_t queue_length = app.qlen_pkts_in[dst_port] - app.qlen_pkts_out[dst_port];
+                // 经过了多少bytes
+                int64_t enqueue = app.qlen_bytes_out[dst_port] - en_queue[i];
+                en_queue[i] = app.qlen_bytes_out[dst_port];
+                // 丢了多少bytes
+                int64_t dropped = app.qlen_drop_bytes[dst_port] - dropped_queue[i];
+                dropped_queue[i] = app.qlen_drop_bytes[dst_port];
+                // 上次返回值
                 float last_t = last_threshold[i];
                 values_queue[position++] = (float)queue_length / buffer_size;
                 values_queue[position++] = (float)enqueue / buffer_size;
                 values_queue[position++] = (float)dropped / buffer_size;
                 values_queue[position++] = (float)last_t;
-                values_queue[position++] = (float)time_interval / 1000;
-                values_queue[position++] = (float)trigger_number / buffer_size;
+                values_queue[position++] = (float)time_interval / buffer_size;
+                values_queue[position++] = (float)trigger_number;
             }
             if (position >= input_dims) position -= input_dims;
 //            printf("position is %d\n", position);
@@ -143,11 +151,12 @@ app_main_loop_RL(void) {
 //            printf("\n");
 
             pre_enqueue = app.qlen_pkts_in[dst_port];
-            pre_drop = app.qlen_drop[dst_port];
+            pre_dequeue = app.qlen_bytes_out[dst_port];
+            pre_drop = app.qlen_drop_bytes[dst_port];
             pre_time = getCurrentTime();
 
             /* run session to get result */
-            run_session(values_p, (int)sizeof(float) * input_dims);
+            run_session(dst_port, values_p, (int)sizeof(float) * input_dims);
 
 
 //            pre_enqueue = app.qlen_pkts_in[dst_port];
@@ -256,7 +265,7 @@ pre_run_session() {
  * @param data_length
  */
 static void
-run_session(float *values_p, int data_length) {
+run_session(uint32_t dst_port,float *values_p, int data_length) {
 
     // Create the input tensor using the dimension (in_dims) and size (num_bytes_in)
     // variables created earlier
@@ -277,9 +286,10 @@ run_session(float *values_p, int data_length) {
     printf("output value : \n");
     for (int i = 0; i < out_put_dim; ++i) {
         printf("%f ", *(out_values + i));
-        last_threshold[i] = ((*(out_values + i)) + 1) / 2;
-        app.port_threshold[0] = (int64_t) (((*(out_values + i)) + 1) / 2.0 * buffer_size);
-        printf("queue is %d, threshold is %ld\n", i, app.port_threshold[0]);
+//        last_threshold[i] = ((*(out_values + i)) + 1) / 2;
+        last_threshold[i] = *(out_values + i);
+        app.port_alpha[dst_port] = (int32_t) (((*(out_values + i)) + 1) / 2.0 * (upper - lower + 1)) + lower;
+        printf("queue is %d, alpha is %d\n", i, app.port_alpha[dst_port]);
     }
     printf("\n");
 
@@ -323,5 +333,5 @@ int64_t
 getCurrentTime() {
     struct timeval tv;
     gettimeofday(&tv, NULL);    //该函数在sys/time.h头文件中
-    return (tv.tv_sec * 1000000) + (tv.tv_usec / 1);
+    return (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
 }
