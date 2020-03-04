@@ -146,7 +146,7 @@ struct app_configs {
     long C2;
     long max_burst_time;
     long T1;
-    long RL_init_threshold;
+    long RL_init_alpha;
     cfg_t *cfg;
 };
 
@@ -163,7 +163,7 @@ struct app_params {
     uint32_t core_worker;
     uint32_t core_tx[RTE_MAX_LCORE];
     uint32_t core_log;
-    uint32_t core_rl;
+    uint32_t core_rl[APP_MAX_PORTS];
 
     /* Ports*/
     uint32_t ports[APP_MAX_PORTS];
@@ -233,9 +233,11 @@ struct app_params {
     uint64_t qlen_bytes_out_queue[APP_MAX_PORTS][APP_MAX_QUEUES];
     uint32_t queue_priority[APP_MAX_PORTS];
     int64_t qlen_drop[APP_MAX_PORTS];
-    int64_t qlen_drop_queue[APP_MAX_PORTS][APP_MAX_QUEUES];
+    int64_t qlen_drop_bytes[APP_MAX_PORTS];
+//    int64_t qlen_drop_queue[APP_MAX_PORTS][APP_MAX_QUEUES];
 
     int64_t port_threshold[APP_MAX_PORTS];
+    int32_t port_alpha[APP_MAX_PORTS];
 
     /* Rings */
     struct rte_ring *rings_rx[APP_MAX_PORTS];
@@ -302,7 +304,7 @@ void app_main_tx_port(uint32_t);
 void app_main_loop_logging(void);
 
 /* use RL to calc threshold */
-void app_main_loop_RL(void);
+void app_main_loop_RL(uint32_t);
 
 /*
  * Initialize forwarding table.
@@ -347,6 +349,8 @@ uint32_t qlen_threshold_cs(uint32_t port_id);
 
 /* enhancing dynamic threshold */
 uint32_t qlen_threshold_edt(uint32_t port_id);
+
+uint32_t qlen_threshold_rl(uint32_t port_id);
 
 uint32_t qlen_threshold_awa(uint32_t port_id);
 
