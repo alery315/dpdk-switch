@@ -163,7 +163,7 @@ struct app_params {
     uint32_t core_worker;
     uint32_t core_tx[RTE_MAX_LCORE];
     uint32_t core_log;
-    uint32_t core_rl[APP_MAX_PORTS];
+    uint32_t core_rl;
 
     /* Ports*/
     uint32_t ports[APP_MAX_PORTS];
@@ -225,15 +225,15 @@ struct app_params {
     /*rte_rwlock_t lock_qlen[APP_MAX_PORTS];*/
     uint64_t qlen_bytes_in[APP_MAX_PORTS];
     uint64_t qlen_bytes_out[APP_MAX_PORTS];
-    int64_t qlen_pkts_in[APP_MAX_PORTS];
-    int64_t qlen_pkts_out[APP_MAX_PORTS];
+    uint64_t qlen_pkts_in[APP_MAX_PORTS];
+    uint64_t qlen_pkts_out[APP_MAX_PORTS];
     uint64_t qlen_pkts_in_queue[APP_MAX_PORTS][APP_MAX_QUEUES];
     uint64_t qlen_pkts_out_queue[APP_MAX_PORTS][APP_MAX_QUEUES];
     uint64_t qlen_bytes_in_queue[APP_MAX_PORTS][APP_MAX_QUEUES];
     uint64_t qlen_bytes_out_queue[APP_MAX_PORTS][APP_MAX_QUEUES];
     uint32_t queue_priority[APP_MAX_PORTS];
-    int64_t qlen_drop[APP_MAX_PORTS];
-    int64_t qlen_drop_bytes[APP_MAX_PORTS];
+    uint64_t qlen_drop[APP_MAX_PORTS];
+    uint64_t qlen_drop_bytes[APP_MAX_PORTS];
 //    int64_t qlen_drop_queue[APP_MAX_PORTS][APP_MAX_QUEUES];
 
     int64_t port_threshold[APP_MAX_PORTS];
@@ -304,7 +304,7 @@ void app_main_tx_port(uint32_t);
 void app_main_loop_logging(void);
 
 /* use RL to calc threshold */
-void app_main_loop_RL(uint32_t);
+void app_main_loop_RL(void);
 
 /*
  * Initialize forwarding table.

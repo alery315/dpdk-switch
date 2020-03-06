@@ -42,12 +42,12 @@ log_threshold(uint32_t port_id) {
 //        }
         RTE_LOG(
                 INFO, SWITCH,
-                "%s: --------qlen_in is > %lu, qlen_out is %lu, qlen_drop is %lu\n",
+                "%s: --------qlen_in is > %lu, qlen_out is %lu, qlen_drop is %lu, qlen is %lu\n",
                 __func__,
                 app.qlen_bytes_in[j],
                 app.qlen_bytes_out[j],
-                app.qlen_drop_bytes[j]
-
+                app.qlen_drop_bytes[j],
+                app.qlen_bytes_in[j] - app.qlen_bytes_out[j]
         );
     }
 
@@ -92,8 +92,8 @@ log_threshold(uint32_t port_id) {
 //               app.counter2_d[port_id],
 //               app.counter2_e[port_id] - app.counter2_d[port_id]);
 
-        for (uint32_t i = 0; i < app.n_queues; ++i) {
-            printf("queue is %d, threshold is %ld\n", i, app.port_threshold[0]);
+        for (uint32_t i = 0; i < app.n_ports; ++i) {
+            printf("port is %d, alpha is %d\n", i, app.port_alpha[i]);
         }
         printf("********************************************************\n");
     }

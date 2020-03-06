@@ -140,17 +140,18 @@ app_lcore_main_loop(__attribute__((unused)) void *arg) {
     }
 
     if (app.rl_policy) {
-        for (i  = 0; i < app.n_ports; ++i) {
-            if (lcore == app.core_rl[i]) {
-                RTE_LOG(
-                        INFO, SWITCH,
-                        "%s: current lcore is %u, doing rl calc for port %d...\n",
-                        __func__, lcore, i
-                );
-                app_main_loop_RL(i);
-                return 0;
-            }
+        if (lcore == app.core_rl) {
+            RTE_LOG(
+                    INFO, SWITCH,
+                    "%s: current lcore is %u, doing rl calc...\n",
+                    __func__, lcore
+            );
+            app_main_loop_RL();
+            return 0;
         }
+//        for (i  = 0; i < app.n_ports; ++i) {
+//            
+//        }
     }
 
 //    if (lcore == app.core_rl && app.rl_policy) {

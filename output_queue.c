@@ -44,6 +44,9 @@ qlen_threshold_edt(uint32_t port_id){
 uint32_t
 qlen_threshold_rl(uint32_t port_id) {
     // (总大小 - 已占buf) * alpha
+    if (app.port_alpha[port_id] < 0) {
+        return ((app.buff_size_bytes - get_buff_occu_bytes()) >> -app.port_alpha[port_id]);
+    }
     return ((app.buff_size_bytes - get_buff_occu_bytes()) << app.port_alpha[port_id]);
 }
 

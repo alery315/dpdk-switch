@@ -107,9 +107,8 @@ int main() {
 
     __uint64_t a = 100;
     printf("%lu\n", a >> 1);
-    printf("%d\n", DIFF(10, 20));
-    printf("%d\n", DIFF(10, 10));
-    printf("%d\n", DIFF(20, 10));
+    printf("%lu\n", a << 1);
+
 
     return 0;
 }
