@@ -1,6 +1,7 @@
 #include "main.h"
 
 // struct app_params app;
+volatile bool log_info;
 
 static const char usage[] = "./<app name> [EAL options] -- -p PORTMASK\n";
 
@@ -137,6 +138,7 @@ app_read_config_file(const char *fname) {
         app.edt_policy = 0;
         app.awa_policy = 0;
         app.rl_policy = 0;
+        log_info = false;
         if (!strcmp(app_cfg.bm_policy, "ST")) {
             app.get_threshold = qlen_threshold_equal_division;
             RTE_LOG(

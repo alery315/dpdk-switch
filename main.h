@@ -153,6 +153,7 @@ struct app_configs {
 extern struct app_configs app_cfg;
 
 extern volatile bool force_quit;
+extern volatile bool log_info;
 struct app_params {
     uint64_t cpu_freq[RTE_MAX_LCORE];
     uint64_t start_cycle;

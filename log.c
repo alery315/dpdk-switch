@@ -3,8 +3,42 @@
 //
 #include "main.h"
 
-#define DIFF(a,b) a > b ? a - b : 0
-#define SLEEP_TIME 1
+#define DIFF(a, b) a > b ? a - b : 0
+#define SLEEP_TIME 2
+#define SLEEP_TIME_US 2000
+#define COUNT 2000
+#define TRIGER_NUM 20000
+
+char *log_file_name = "qlen_log.txt";
+FILE *log_file;
+
+
+static void
+init_qlen() {
+    // file
+    log_file = fopen(log_file_name, "w");
+    if (log_file == NULL) {
+        perror("Open file error:");
+        RTE_LOG(
+                ERR, SWITCH,
+                "%s: Cannot open qlen log file '%s'\n",
+                __func__, log_file_name
+        );
+    }
+
+    fprintf(
+            log_file,
+            "%-12s %-12s %-12s %-12s %-12s %-12s %-12s\n",
+            "<Port ID>",
+            "<qlen_in>",
+            "<qlen_out>",
+            "<qlen>",
+            "<qlen_drop>",
+            "<threshold>",
+            "<interval(in ms)>");
+    // 文件流缓冲区立即刷新,输出到文件
+    fflush(log_file);
+}
 
 static void
 log_qlen_info(uint32_t port_id) {
@@ -29,6 +63,8 @@ log_qlen_info(uint32_t port_id) {
 
 static void
 log_threshold(uint32_t port_id) {
+
+    sleep(SLEEP_TIME);
 
     // 为了防止计数器爆表
     for (uint32_t j = 0; j < app.n_ports; ++j) {
@@ -85,18 +121,18 @@ log_threshold(uint32_t port_id) {
             get_buff_occu_bytes() / 1024
     );
 
-    if (app.rl_policy) {
-//        printf("port is %u, counter2_e is %ld, counter2_d is %ld, diff is %ld\n",
-//               port_id,
-//               app.counter2_e[port_id],
-//               app.counter2_d[port_id],
-//               app.counter2_e[port_id] - app.counter2_d[port_id]);
-
-        for (uint32_t i = 0; i < app.n_ports; ++i) {
-            printf("port is %d, alpha is %d\n", i, app.port_alpha[i]);
-        }
-        printf("********************************************************\n");
-    }
+//    if (app.rl_policy) {
+////        printf("port is %u, counter2_e is %ld, counter2_d is %ld, diff is %ld\n",
+////               port_id,
+////               app.counter2_e[port_id],
+////               app.counter2_d[port_id],
+////               app.counter2_e[port_id] - app.counter2_d[port_id]);
+//
+//        for (uint32_t i = 0; i < app.n_ports; ++i) {
+//            printf("port is %d, alpha is %d\n", i, app.port_alpha[i]);
+//        }
+//        printf("********************************************************\n");
+//    }
 
 }
 
@@ -153,18 +189,43 @@ app_main_loop_logging(void) {
 //        sleep(2);
 //    }
 
-    for (i = 0; !force_quit; i = ((i + 1) & (app.n_ports - 1))) {
-
-        log_threshold(i);
-
-//        log_qlen_info(i);
-
-//        log_transmit_args(i);
+    int64_t pre_time = 0;
+    uint32_t ports = app.n_ports;
+    uint32_t count = 0;
 
 
+//    for (i = 0; !force_quit; i = ((i + 1) & (app.n_ports - 1))) {
+//        log_threshold(i);
+//
+////        log_qlen_info(i);
+////
+////        log_transmit_args(i);
+//    }
 
-        sleep(SLEEP_TIME);
+    init_qlen();
+    for (; !force_quit;) {
+        if (log_info && count < COUNT) {
+            for (i = 0; i < ports; i++) {
+                fprintf(
+                        log_file,
+                        "%-12d %-12lu %-12lu %-12lu %-12lu %-12u %-12lu\n",
+                        i,
+                        app.qlen_bytes_in[i] / 1024,
+                        app.qlen_bytes_out[i] / 1024,
+                        (app.qlen_bytes_in[i] - app.qlen_bytes_out[i]) / 1024,
+                        app.qlen_drop_bytes[i] / 1024,
+                        app.get_threshold(i) / 1024,
+                        getCurrentTime() - pre_time);
+                count++;
+            }
+            fprintf(log_file, "--------------------------------------------------------------------------------\n");
+            fflush(log_file);
+            pre_time = getCurrentTime();
+        }
+        usleep(SLEEP_TIME_US);
     }
+    //        free(log_file_name);
+    fclose(log_file);
 }
 
 

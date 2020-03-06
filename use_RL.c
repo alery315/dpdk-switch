@@ -38,7 +38,13 @@ float buffer_size;
 int upper = 9;
 int lower = -6;
 
-const char *file = "nn_model_ep_60.pb";
+// output file
+int64_t pre_time_file = 0;
+char *rl_file_name = "rl_log.txt";
+FILE *rl_file;
+volatile bool log_info;
+
+const char *file = "nn_model_ep_10.pb";
 const char *input_op_name = "Placeholder";
 const char *operation_name = "main/mul";
 
@@ -191,6 +197,11 @@ app_main_loop_RL(void) {
     }
 
 
+    // log file
+//    free(rl_file_name);
+    fclose(rl_file);
+    log_info = false;
+
     // free resource
     TF_CloseSession(session, status);
     TF_DeleteSession(session, status);
@@ -199,6 +210,8 @@ app_main_loop_RL(void) {
     TF_DeleteGraph(graph);
     TF_DeleteStatus(status);
     TF_DeleteBuffer(graph_buf);
+
+
 
 }
 
@@ -247,6 +260,30 @@ init(const char *t_file) {
     session = TF_NewSession(graph, sess_opts, status);
 
     check_status_ok(status, "create new session");
+
+    // file
+    rl_file = fopen(rl_file_name, "a+");
+    if (rl_file == NULL) {
+        perror("Open file error:");
+        RTE_LOG(
+                ERR, SWITCH,
+                "%s: Cannot open rl log file '%s'\n",
+                __func__, rl_file_name
+        );
+    }
+
+    fprintf(
+        rl_file,
+        "%-8s %-8s %-8s %-8s %-10s %-10s\n",
+        "<Port 1>",
+        "<Port 2>",
+        "<Port 3>",
+        "<Port 4>",
+        "<interval>",
+        "<Time(ms)>");
+    // 文件流缓冲区立即刷新,输出到文件
+    fflush(rl_file);
+
 }
 
 /**
@@ -280,6 +317,8 @@ pre_run_session() {
 static void
 run_session(float *values_p, int data_length) {
 
+    log_info = true;
+
     // Create the input tensor using the dimension (in_dims) and size (num_bytes_in)
     // variables created earlier
     input = TF_NewTensor(TF_FLOAT, in_dims, n_dims, values_p, data_length, &deallocator, NULL);
@@ -296,15 +335,30 @@ run_session(float *values_p, int data_length) {
     // get result after run session
     float *out_values = TF_TensorData(output_values);
 
-    printf("output value : \n");
+//    printf("output value : \n");
     for (int i = 0; i < out_put_dim; ++i) {
-        printf("%f ", *(out_values + i));
+//        printf("%f ", *(out_values + i));
 //        last_threshold[i] = ((*(out_values + i)) + 1) / 2;
         last_threshold[i] = *(out_values + i);
         app.port_alpha[i] = (int32_t) (((*(out_values + i)) + 1) / 2.0 * (upper - lower + 1)) + lower;
-        printf("queue is %d, alpha is %d\n", i, app.port_alpha[i]);
+//        printf("queue is %d, alpha is %d\n", i, app.port_alpha[i]);
     }
-    printf("\n");
+//    printf("\n");
+
+    // log to file
+    fprintf(
+            rl_file,
+            "%-8d %-8d %-8d %-8d %-10lu %-10lu\n",
+            // 记录的cpu_freq主要用在这里
+            app.port_alpha[0],
+            app.port_alpha[1],
+            app.port_alpha[2],
+            app.port_alpha[3],
+            getCurrentTime() - pre_time_file,
+            getCurrentTime()
+    );
+    fflush(rl_file);
+    pre_time_file = getCurrentTime();
 
     // 这里不能free,会导致后面TF_NewTensor时候空指针
 //     free(values_p);

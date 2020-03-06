@@ -272,7 +272,6 @@ int packet_enqueue(uint32_t dst_port, struct rte_mbuf *pkt) {
         }
         */
     } else {
-
         // EDT policy
         if (app.edt_policy) {
             app.counter2_e[dst_port] = 0;
