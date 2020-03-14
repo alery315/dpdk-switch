@@ -5,8 +5,8 @@
 
 #define DIFF(a, b) a > b ? a - b : 0
 #define SLEEP_TIME 2
-#define SLEEP_TIME_US 2000
-#define COUNT 2000
+#define SLEEP_TIME_US 20
+#define COUNT 300000
 #define TRIGER_NUM 20000
 
 char *log_file_name = "qlen_log.txt";
@@ -16,7 +16,7 @@ FILE *log_file;
 static void
 init_qlen() {
     // file
-    log_file = fopen(log_file_name, "w");
+    log_file = fopen(log_file_name, "a");
     if (log_file == NULL) {
         perror("Open file error:");
         RTE_LOG(
@@ -32,8 +32,8 @@ init_qlen() {
             "<Port ID>",
             "<qlen_in>",
             "<qlen_out>",
-            "<qlen>",
             "<qlen_drop>",
+            "<qlen_occur>",
             "<threshold>",
             "<interval(in ms)>");
     // 文件流缓冲区立即刷新,输出到文件
@@ -194,38 +194,61 @@ app_main_loop_logging(void) {
     uint32_t count = 0;
 
 
-//    for (i = 0; !force_quit; i = ((i + 1) & (app.n_ports - 1))) {
-//        log_threshold(i);
-//
-////        log_qlen_info(i);
-////
-////        log_transmit_args(i);
-//    }
-
     init_qlen();
-    for (; !force_quit;) {
-        if (log_info && count < COUNT) {
-            for (i = 0; i < ports; i++) {
+
+    if (app.rl_policy) {
+
+        for (; !force_quit;) {
+            if (log_info && count < COUNT) {
+                for (i = 0; i < ports; i++) {
+                    fprintf(
+                            log_file,
+                            "%-12d %-12lu %-12lu %-12lu %-12lu %-12u %-12lu\n",
+                            i,
+                            app.qlen_bytes_in[i] / 1024,
+                            app.qlen_bytes_out[i] / 1024,
+                            app.qlen_drop_bytes[i] / 1024,
+                            (app.qlen_bytes_in[i] - app.qlen_bytes_out[i]) / 1024,
+                            app.get_threshold(i) / 1024,
+                            getCurrentTime() - pre_time);
+                    count++;
+                }
+                fprintf(log_file, "--------------------------------------------------------------------------------\n");
+                fflush(log_file);
+                pre_time = getCurrentTime();
+            }
+            usleep(SLEEP_TIME_US);
+        }
+        //        free(log_file_name);
+    } else {
+        for (i = 0; !force_quit; i = ((i + 1) & (app.n_ports - 1))) {
+
+//            log_threshold(i);
+            if (app.qlen_bytes_in[i] - app.qlen_bytes_out[i] > 60) {
                 fprintf(
                         log_file,
                         "%-12d %-12lu %-12lu %-12lu %-12lu %-12u %-12lu\n",
                         i,
                         app.qlen_bytes_in[i] / 1024,
                         app.qlen_bytes_out[i] / 1024,
-                        (app.qlen_bytes_in[i] - app.qlen_bytes_out[i]) / 1024,
                         app.qlen_drop_bytes[i] / 1024,
+                        (app.qlen_bytes_in[i] - app.qlen_bytes_out[i]) / 1024,
                         app.get_threshold(i) / 1024,
                         getCurrentTime() - pre_time);
-                count++;
+//                count++;
             }
-            fprintf(log_file, "--------------------------------------------------------------------------------\n");
+//            fprintf(log_file, "--------------------------------------------------------------------------------\n");
             fflush(log_file);
             pre_time = getCurrentTime();
+            usleep(SLEEP_TIME_US);
         }
-        usleep(SLEEP_TIME_US);
+//          log_qlen_info(i);
+//
+//          log_transmit_args(i);
+
     }
-    //        free(log_file_name);
     fclose(log_file);
+
 }
 
 

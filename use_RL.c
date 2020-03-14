@@ -28,15 +28,15 @@ TF_Tensor *output_values;
 
 // input data
 int n_dims = 4;
-int64_t in_dims[] = {1, 8, 6, 4};
-int input_dims = 8 * 6 * 4;
-int one_input_dim = 6 * 4;
+int64_t in_dims[] = {1, 8, 5, 4};
+int input_dims = 8 * 5 * 4;
+int one_input_dim = 5 * 4;
 int out_put_dim = 4;
-int64_t trigger_number = 20;
+int64_t trigger_number = 30;
 float last_threshold[4];
 float buffer_size;
-int upper = 9;
-int lower = -6;
+int upper = 6;
+int lower = -4;
 
 // output file
 int64_t pre_time_file = 0;
@@ -44,7 +44,7 @@ char *rl_file_name = "rl_log.txt";
 FILE *rl_file;
 volatile bool log_info;
 
-const char *file = "nn_model_ep_10.pb";
+const char *file = "model_pb/nn_model_ep_56.pb";
 const char *input_op_name = "Placeholder";
 const char *operation_name = "main/mul";
 
@@ -76,7 +76,7 @@ app_main_loop_RL(void) {
     init(file);
     pre_run_session();
 
-    buffer_size = (float)(app.buff_size_bytes / 1.0);
+    buffer_size = (float) (app.buff_size_bytes / 1.0);
 
     uint64_t sum_pkts_in = 0;
     uint64_t sum_pkts_out = 0;
@@ -118,7 +118,7 @@ app_main_loop_RL(void) {
             sum_pkts_drop += app.qlen_drop[k];
         }
         int64_t diff = sum_pkts_in + sum_pkts_drop - sum_pkts_out - pre_enqueue
-                        - pre_drop + pre_dequeue;
+                       - pre_drop + pre_dequeue;
 //        int64_t diff = 1100;
 
         if (diff >= trigger_number) {
@@ -141,12 +141,12 @@ app_main_loop_RL(void) {
                 dropped_queue[i] = app.qlen_drop_bytes[i];
                 // 上次返回值
                 float last_t = last_threshold[i];
-                values_queue[position++] = (float)queue_length / buffer_size;
-                values_queue[position++] = (float)enqueue / buffer_size;
-                values_queue[position++] = (float)dropped / buffer_size;
-                values_queue[position++] = (float)last_t;
-                values_queue[position++] = (float)time_interval / buffer_size;
-                values_queue[position++] = (float)trigger_number;
+                values_queue[position++] = (float) queue_length / buffer_size;
+                values_queue[position++] = (float) enqueue / buffer_size;
+                values_queue[position++] = (float) dropped / buffer_size;
+                values_queue[position++] = (float) last_t;
+                values_queue[position++] = (float) time_interval / buffer_size;
+//                values_queue[position++] = (float)trigger_number;
             }
             if (position >= input_dims) position -= input_dims;
 //            printf("position is %d\n", position);
@@ -175,7 +175,7 @@ app_main_loop_RL(void) {
             pre_time = getCurrentTime();
 
             /* run session to get result */
-            run_session(values_p, (int)sizeof(float) * input_dims);
+            run_session(values_p, (int) sizeof(float) * input_dims);
 
 
 //            pre_enqueue = app.qlen_pkts_in[dst_port];
@@ -210,7 +210,6 @@ app_main_loop_RL(void) {
     TF_DeleteGraph(graph);
     TF_DeleteStatus(status);
     TF_DeleteBuffer(graph_buf);
-
 
 
 }
@@ -273,14 +272,14 @@ init(const char *t_file) {
     }
 
     fprintf(
-        rl_file,
-        "%-8s %-8s %-8s %-8s %-10s %-10s\n",
-        "<Port 1>",
-        "<Port 2>",
-        "<Port 3>",
-        "<Port 4>",
-        "<interval>",
-        "<Time(ms)>");
+            rl_file,
+            "%-10s %-10s %-10s %-10s %-10s\n",
+            "<Port 1>",
+            "<Port 2>",
+            "<Port 3>",
+            "<Port 4>",
+            "<interval(ms)>");
+
     // 文件流缓冲区立即刷新,输出到文件
     fflush(rl_file);
 
@@ -341,21 +340,20 @@ run_session(float *values_p, int data_length) {
 //        last_threshold[i] = ((*(out_values + i)) + 1) / 2;
         last_threshold[i] = *(out_values + i);
         app.port_alpha[i] = (int32_t) (((*(out_values + i)) + 1) / 2.0 * (upper - lower + 1)) + lower;
-//        printf("queue is %d, alpha is %d\n", i, app.port_alpha[i]);
+//        printf("queue is %d, alpha is %d, threshold is %d\n", i, app.port_alpha[i], app.get_threshold(i));
     }
 //    printf("\n");
 
     // log to file
     fprintf(
             rl_file,
-            "%-8d %-8d %-8d %-8d %-10lu %-10lu\n",
+            "%-10d %-10d %-10d %-10d %-10lu\n",
             // 记录的cpu_freq主要用在这里
             app.port_alpha[0],
             app.port_alpha[1],
             app.port_alpha[2],
             app.port_alpha[3],
-            getCurrentTime() - pre_time_file,
-            getCurrentTime()
+            getCurrentTime() - pre_time_file
     );
     fflush(rl_file);
     pre_time_file = getCurrentTime();

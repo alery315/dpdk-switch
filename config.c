@@ -141,6 +141,7 @@ app_read_config_file(const char *fname) {
         log_info = false;
         if (!strcmp(app_cfg.bm_policy, "ST")) {
             app.get_threshold = qlen_threshold_equal_division;
+            app.buff_size_per_port_bytes = app.buff_size_bytes / app.n_ports;
             RTE_LOG(
                     INFO, SWITCH,
                     "%s: shared memory enabled, bm_policy: Static Division, buffer_size: %uB=%uKiB\n",
