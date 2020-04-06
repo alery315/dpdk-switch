@@ -44,7 +44,7 @@ char *rl_file_name = "rl_log.txt";
 FILE *rl_file;
 volatile bool log_info;
 
-const char *file = "model_pb/nn_model_ep_56.pb";
+const char *file = "model_pb/NDT_0405.pb";
 const char *input_op_name = "Placeholder";
 const char *operation_name = "main/mul";
 
@@ -67,7 +67,7 @@ static void deallocator(void *data, size_t length, void *arg);
 
 
 void
-app_main_loop_RL(void) {
+app_main_loop_RL(uint32_t port_id) {
 
     /* init and prepare run session */
 
@@ -93,89 +93,131 @@ app_main_loop_RL(void) {
         values_queue[l] = 0;
     }
 
+    int64_t en_queue[ports];
+    int64_t dropped_queue[ports];
     for (uint32_t k = 0; k < ports; ++k) {
         last_threshold[k] = 1;
+        en_queue[k] = 0;
+        dropped_queue[k] = 0;
     }
-    int64_t en_queue[ports];
-    for (uint32_t m = 0; m < ports; ++m) {
-        en_queue[m] = 0;
-    }
-    int64_t dropped_queue[ports];
-    for (uint32_t n = 0; n < ports; ++n) {
-        dropped_queue[n] = 0;
-    }
+
 
     for (; !force_quit;) {
 
 //        int64_t diff = app.qlen_pkts_in[dst_port] + app.qlen_drop_bytes[dst_port] - app.qlen_bytes_out[dst_port] - pre_drop -
 //                       pre_enqueue + pre_dequeue;
-        sum_pkts_in = 0;
-        sum_pkts_out = 0;
-        sum_pkts_drop = 0;
-        for (uint32_t k = 0; k < ports; ++k) {
-            sum_pkts_in += app.qlen_pkts_in[k];
-            sum_pkts_out += app.qlen_pkts_out[k];
-            sum_pkts_drop += app.qlen_drop[k];
-        }
-        int64_t diff = sum_pkts_in + sum_pkts_drop - sum_pkts_out - pre_enqueue
-                       - pre_drop + pre_dequeue;
+//        sum_pkts_in = 0;
+//        sum_pkts_out = 0;
+//        sum_pkts_drop = 0;
+//        for (uint32_t k = 0; k < ports; ++k) {
+//            sum_pkts_in += app.qlen_pkts_in[k];
+//            sum_pkts_out += app.qlen_pkts_out[k];
+//            sum_pkts_drop += app.qlen_drop[k];
+//        }
+        int64_t diff_common = app.qlen_pkts_in[port_id] + app.qlen_drop[port_id] - app.qlen_pkts_out[port_id] - app.common_count[port_id];
+        int64_t diff_loss = app.qlen_drop[port_id] - app.loss_count[port_id];
+
+//        int64_t diff = sum_pkts_in + sum_pkts_drop - sum_pkts_out - pre_enqueue
+//                       - pre_drop + pre_dequeue;
 //        int64_t diff = 1100;
 
-        if (diff >= trigger_number) {
-            int64_t time_interval = getCurrentTime() - pre_time;
+        if (diff_common >= trigger_number || (diff_loss >= trigger_number && !app.loss_flag[port_id])) {
+            if (diff_loss >= trigger_number) {
+                // 清零普通计数器与丢包计数器
+                for (uint32_t i = 0; i < ports; ++i) {
+                    app.common_count[i] = app.qlen_pkts_in[i] + app.qlen_drop[i] - app.qlen_pkts_out[i];
+                    app.loss_count[i] = app.qlen_drop[i];
+                    app.loss_flag[i] = 0;
+                }
+            } else {
+                // 丢包触发flag,保证不会多次触发
+                app.loss_flag[port_id] = 1;
+                // 清零普通计数器
+                for (uint32_t i = 0; i < ports; ++i) {
+                    app.common_count[i] = app.qlen_pkts_in[i] + app.qlen_drop[i] - app.qlen_pkts_out[i];
+                }
+            }
+
 //            RTE_LOG(
 //                    INFO, SWITCH,
 //                    "%s: time interval is %lu μs, diff is %lu packets\n",
 //                    __func__, time_interval, diff
 //            );
 
+            // 组装数据
+            int64_t time_interval = getCurrentTime() - pre_time;
             for (uint32_t i = 0; i < ports; ++i) {
-                // 组装数据
                 // 队列长度
                 int64_t queue_length = app.qlen_bytes_in[i] - app.qlen_bytes_out[i];
+                values_queue[position++] = (float) queue_length / buffer_size;
+//                values_queue[position++] = (float)trigger_number;
+            }
+            for (uint32_t i = 0; i < ports; ++i) {
                 // 经过了多少bytes
                 int64_t enqueue = app.qlen_bytes_out[i] - en_queue[i];
                 en_queue[i] = app.qlen_bytes_out[i];
+                values_queue[position++] = (float) enqueue / buffer_size;
+
+            }
+            for (uint32_t i = 0; i < ports; ++i) {
                 // 丢了多少bytes
                 int64_t dropped = app.qlen_drop_bytes[i] - dropped_queue[i];
                 dropped_queue[i] = app.qlen_drop_bytes[i];
+                values_queue[position++] = (float) dropped / buffer_size;
+
+            }
+            for (uint32_t i = 0; i < ports; ++i) {
                 // 上次返回值
                 float last_t = last_threshold[i];
-                values_queue[position++] = (float) queue_length / buffer_size;
-                values_queue[position++] = (float) enqueue / buffer_size;
-                values_queue[position++] = (float) dropped / buffer_size;
+
                 values_queue[position++] = (float) last_t;
-                values_queue[position++] = (float) time_interval / buffer_size;
-//                values_queue[position++] = (float)trigger_number;
+
             }
+            for (uint32_t i = 0; i < ports; ++i) {
+                // 间隔时间μs
+                values_queue[position++] = (float) time_interval / buffer_size;
+            }
+
             if (position >= input_dims) position -= input_dims;
 //            printf("position is %d\n", position);
             int t_pos = position;
+
+            // fprintf(
+            //             rl_file,
+            //             "%-10u %-10f %-10f %-10f %-10f %-10f %-10ld\n",
+            //             i,
+            //             (float) queue_length / buffer_size,
+            //             (float) enqueue / buffer_size,
+            //             (float) dropped / buffer_size,
+            //             (float) last_t,
+            //             (float) time_interval / buffer_size,
+            //             diff
+            // );
 
             float *values_p = malloc(sizeof(float) * input_dims);
 
             for (int j = 0; j < input_dims; ++j) {
                 *(values_p + j) = values_queue[t_pos];
-
-//                *(values_p + j) = (float) j;
-                //输出结果
-//                printf("%8.4f ", *(values_p + j));
-//                if (j % 6 == 5) {
-//                    printf(" j: %d\n", j);
-//                }
-
+                // 输出结果
+                // printf("%8.4f ", *(values_p + j));
+                // if (j % 4 == 3) {
+                //     printf(" j: %d\n", j);
+                // }
+                // if (j % 20 == 19) {
+                //     printf("\n", j);
+                // }
                 t_pos++;
                 if (t_pos >= input_dims) t_pos -= input_dims;
             }
-//            printf("\n");
-
-            pre_enqueue = sum_pkts_in;
-            pre_dequeue = sum_pkts_out;
-            pre_drop = sum_pkts_drop;
-            pre_time = getCurrentTime();
+            // printf("\n");
 
             /* run session to get result */
             run_session(values_p, (int) sizeof(float) * input_dims);
+            pre_time = getCurrentTime();
+
+//            pre_enqueue = sum_pkts_in;
+//            pre_dequeue = sum_pkts_out;
+//            pre_drop = sum_pkts_drop;
 
 
 //            pre_enqueue = app.qlen_pkts_in[dst_port];
@@ -190,7 +232,7 @@ app_main_loop_RL(void) {
 
         }
 
-        if (diff <= -1) {
+        if (diff1 <= -1 && diff2 <= -1) {
             int64_t time_interval = getCurrentTime() - pre_time;
         }
 
@@ -398,5 +440,5 @@ int64_t
 getCurrentTime() {
     struct timeval tv;
     gettimeofday(&tv, NULL);    //该函数在sys/time.h头文件中
-    return (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
+    return (tv.tv_sec * 1000000) + (tv.tv_usec);
 }

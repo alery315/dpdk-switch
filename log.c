@@ -193,61 +193,64 @@ app_main_loop_logging(void) {
     uint32_t ports = app.n_ports;
     uint32_t count = 0;
 
-
-    init_qlen();
-
-    if (app.rl_policy) {
-
-        for (; !force_quit;) {
-            if (log_info && count < COUNT) {
-                for (i = 0; i < ports; i++) {
-                    fprintf(
-                            log_file,
-                            "%-12d %-12lu %-12lu %-12lu %-12lu %-12u %-12lu\n",
-                            i,
-                            app.qlen_bytes_in[i] / 1024,
-                            app.qlen_bytes_out[i] / 1024,
-                            app.qlen_drop_bytes[i] / 1024,
-                            (app.qlen_bytes_in[i] - app.qlen_bytes_out[i]) / 1024,
-                            app.get_threshold(i) / 1024,
-                            getCurrentTime() - pre_time);
-                    count++;
-                }
-                fprintf(log_file, "--------------------------------------------------------------------------------\n");
-                fflush(log_file);
-                pre_time = getCurrentTime();
-            }
-            usleep(SLEEP_TIME_US);
-        }
-        //        free(log_file_name);
-    } else {
-        for (i = 0; !force_quit; i = ((i + 1) & (app.n_ports - 1))) {
-
-//            log_threshold(i);
-            if (app.qlen_bytes_in[i] - app.qlen_bytes_out[i] > 60) {
-                fprintf(
-                        log_file,
-                        "%-12d %-12lu %-12lu %-12lu %-12lu %-12u %-12lu\n",
-                        i,
-                        app.qlen_bytes_in[i] / 1024,
-                        app.qlen_bytes_out[i] / 1024,
-                        app.qlen_drop_bytes[i] / 1024,
-                        (app.qlen_bytes_in[i] - app.qlen_bytes_out[i]) / 1024,
-                        app.get_threshold(i) / 1024,
-                        getCurrentTime() - pre_time);
-//                count++;
-            }
-//            fprintf(log_file, "--------------------------------------------------------------------------------\n");
-            fflush(log_file);
-            pre_time = getCurrentTime();
-            usleep(SLEEP_TIME_US);
-        }
-//          log_qlen_info(i);
-//
-//          log_transmit_args(i);
-
+    for (i = 0; !force_quit; i = ((i + 1) & (app.n_ports - 1))) {
+        log_threshold(i);
     }
-    fclose(log_file);
+
+//    init_qlen();
+//
+//    if (app.rl_policy) {
+//
+//        for (; !force_quit;) {
+//            if (log_info && count < COUNT) {
+//                for (i = 0; i < ports; i++) {
+//                    fprintf(
+//                            log_file,
+//                            "%-12d %-12lu %-12lu %-12lu %-12lu %-12u %-12lu\n",
+//                            i,
+//                            app.qlen_bytes_in[i] / 1024,
+//                            app.qlen_bytes_out[i] / 1024,
+//                            app.qlen_drop_bytes[i] / 1024,
+//                            (app.qlen_bytes_in[i] - app.qlen_bytes_out[i]) / 1024,
+//                            app.get_threshold(i) / 1024,
+//                            getCurrentTime() - pre_time);
+//                    count++;
+//                }
+//                fprintf(log_file, "--------------------------------------------------------------------------------\n");
+//                fflush(log_file);
+//                pre_time = getCurrentTime();
+//            }
+//            usleep(SLEEP_TIME_US);
+//        }
+//        //        free(log_file_name);
+//    } else {
+//        for (i = 0; !force_quit; i = ((i + 1) & (app.n_ports - 1))) {
+//
+////            log_threshold(i);
+//            if (app.qlen_bytes_in[i] - app.qlen_bytes_out[i] > 60) {
+//                fprintf(
+//                        log_file,
+//                        "%-12d %-12lu %-12lu %-12lu %-12lu %-12u %-12lu\n",
+//                        i,
+//                        app.qlen_bytes_in[i] / 1024,
+//                        app.qlen_bytes_out[i] / 1024,
+//                        app.qlen_drop_bytes[i] / 1024,
+//                        (app.qlen_bytes_in[i] - app.qlen_bytes_out[i]) / 1024,
+//                        app.get_threshold(i) / 1024,
+//                        getCurrentTime() - pre_time);
+////                count++;
+//            }
+////            fprintf(log_file, "--------------------------------------------------------------------------------\n");
+//            fflush(log_file);
+//            pre_time = getCurrentTime();
+//            usleep(SLEEP_TIME_US);
+//        }
+////          log_qlen_info(i);
+////
+////          log_transmit_args(i);
+//
+//    }
+//    fclose(log_file);
 
 }
 

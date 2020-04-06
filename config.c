@@ -416,11 +416,11 @@ app_parse_args(int argc, char **argv) {
         app.core_tx[i] = lcores[i + 2];
     }
 
-//    for (i = 0; i < app.n_ports; ++i) {
-//        app.core_rl[i] = lcores[i + 2 + app.n_ports];
-//    }
+    for (i = 0; i < app.n_ports; ++i) {
+        app.core_rl[i] = lcores[i + 2 + app.n_ports];
+    }
 
-    app.core_rl = lcores[n_lcores - 2];
+//    app.core_rl = lcores[n_lcores - 2];
     app.core_log = lcores[n_lcores - 1];
     app.n_lcores = n_lcores;
 

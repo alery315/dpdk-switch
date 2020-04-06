@@ -185,6 +185,7 @@ app_init_rings(void) {
         app.qlen_bytes_in[i] = app.qlen_pkts_in[i] = 0;
         app.qlen_bytes_out[i] = app.qlen_pkts_out[i] = 0;
         app.qlen_drop[i] = app.qlen_drop_bytes[i] = 0;
+        app.common_count[i] = app.loss_count[i] = app.loss_flag[i] = 0;
 //        app.queue_priority[i] = 0;
         app.counter2_e[i] = app.counter2_d[i] = 0;
 

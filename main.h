@@ -164,7 +164,7 @@ struct app_params {
     uint32_t core_worker;
     uint32_t core_tx[RTE_MAX_LCORE];
     uint32_t core_log;
-    uint32_t core_rl;
+    uint32_t core_rl[RTE_MAX_LCORE];
 
     /* Ports*/
     uint32_t ports[APP_MAX_PORTS];
@@ -235,6 +235,10 @@ struct app_params {
     uint32_t queue_priority[APP_MAX_PORTS];
     uint64_t qlen_drop[APP_MAX_PORTS];
     uint64_t qlen_drop_bytes[APP_MAX_PORTS];
+    int64_t common_count[APP_MAX_PORTS];
+    int64_t loss_count[APP_MAX_PORTS];
+    uint8_t loss_flag[APP_MAX_PORTS];
+
 //    int64_t qlen_drop_queue[APP_MAX_PORTS][APP_MAX_QUEUES];
 
     int64_t port_threshold[APP_MAX_PORTS];
@@ -305,7 +309,7 @@ void app_main_tx_port(uint32_t);
 void app_main_loop_logging(void);
 
 /* use RL to calc threshold */
-void app_main_loop_RL(void);
+void app_main_loop_RL(uint32_t);
 
 /*
  * Initialize forwarding table.
